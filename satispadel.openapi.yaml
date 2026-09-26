@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: Satispadel Match API
+  version: 1.0.0
+  description: |
+    API REST para la gestión de partidos amistosos de pádel de Satispadel (Club privado de padel). 
+
+    Reglas de negocio principales:
+    - Un partido admite un máximo de 4 jugadores.
+    - Un jugador solo puede estar inscrito una vez en un mismo partido.
+    - Un partido puede existir en estado OPEN, COMPLETED, CONFIRMED o CANCELLED.
+    - Pueden existir varios partidos con la misma fecha y hora.
+    - La fecha/hora no identifica de forma única un partido; el identificador único es matchId.
+    - Al inscribirse el cuarto jugador, el partido pasa automáticamente de OPEN a COMPLETED.
+    - En COMPLETED, todos los jugadores deben confirmar.
+    - Si cualquier jugador rechaza, el partido pasa inmediatamente a CANCELLED.
+    - Si los cuatro jugadores confirman, el partido pasa a CONFIRMED.
+    - Un jugador solo puede desinscribirse de un partido OPEN.
+    - Si el único jugador abandona un partido OPEN, el partido se elimina.
+    - Un partido CONFIRMED no puede modificarse.
+
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: Matches
+    description: Operaciones sobre partidos
+  - name: Players
+    description: Inscripción y desinscripción de jugadores
+  - name: Confirmations
+    description: Confirmación o rechazo de partidos completados
+
+paths:
+  /matches:
+    post:
+      tags: [Matches]
+      summary: Crear un partido
+      description: |
+        Crea un nuevo partido en estado OPEN.
+
+        Se permite crear varios partidos con la misma fecha y hora.
+        La API genera el matchId.
+      operationId: createMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMatchRequest'
+            example:
+              dateTime: '2026-10-10T18:00:00+02:00'
+      responses:
+        '201':
+          description: Partido creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Match'
+              example:
+                id: match-123
+                dateTime: '2026-10-10T18:00:00+02:00'
+                status: OPEN
+                players: []
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [Matches]
+      summary: Obtener partidos por fecha/hora
+      description: |
+        Devuelve los partidos asociados a una fecha/hora determinada.
+
+        Puede devolver cero, uno o varios partidos porque dateTime no es único.
+      operationId: getMatchesByDateTime
+      parameters:
+        - $ref: '#/components/parameters/DateTimeQuery'
+      responses:
+        '200':
+          description: Lista de partidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchListResponse'
+              example:
+                items:
+                  - id: match-101
+                    dateTime: '2026-10-10T18:00:00+02:00'
+                    status: OPEN
+                    players: []
+                  - id: match-102
+                    dateTime: '2026-10-10T18:00:00+02:00'
+                    status: COMPLETED
+                    players:
+                      - playerId: player-1
+                        slot: 1
+                        confirmation: PENDING
+                      - playerId: player-2
+                        slot: 2
+                        confirmation: PENDING
+                      - playerId: player-3
+                        slot: 3
+                        confirmation: PENDING
+                      - playerId: player-4
+                        slot: 4
+                        confirmation: PENDING
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /matches/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [Matches]
+      summary: Obtener un partido
+      operationId: getMatch
+      responses:
+        '200':
+          description: Partido encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Match'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /matches/{matchId}/players:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [Players]
+      summary: Inscribir un jugador en un partido
+      description: |
+        Inscribe al jugador en el siguiente hueco libre.
+
+        El slot es calculado por el servidor y no puede ser elegido por el cliente.
+
+        Si la inscripción del jugador ocupa el cuarto hueco disponible,
+        el partido pasa automáticamente de OPEN a COMPLETED.
+      operationId: joinMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinMatchRequest'
+            example:
+              playerId: player-2
+      responses:
+        '201':
+          description: Jugador inscrito correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinMatchResult'
+              example:
+                matchId: match-123
+                playerId: player-2
+                slot: 2
+                matchStatus: OPEN
+                confirmation: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - Match must exist.
+        - Match status must be OPEN.
+        - Player must not already be registered in the match.
+        - A free slot must exist.
+        - Fourth registered player transitions the match to COMPLETED.
+
+  /matches/{matchId}/players/{playerId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+      - $ref: '#/components/parameters/PlayerId'
+    delete:
+      tags: [Players]
+      summary: Desinscribir un jugador
+      description: |
+        Elimina la inscripción del jugador.
+
+        Solo está permitido si el partido está en estado OPEN.
+        Si el jugador era el único inscrito, el partido completo se elimina.
+      operationId: leaveMatch
+      responses:
+        '204':
+          description: Inscripción eliminada correctamente.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - Match status must be OPEN.
+        - Player must belong to the match.
+        - If this is the last player, delete the match.
+
+  /matches/{matchId}/confirmation:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [Confirmations]
+      summary: Confirmar o rechazar un partido
+      description: |
+        Registra la decisión de un jugador sobre un partido COMPLETED.
+
+        - DECLINED: el partido pasa inmediatamente a CANCELLED.
+        - CONFIRMED: si los cuatro jugadores están CONFIRMED, el partido pasa a CONFIRMED.
+      operationId: confirmOrDeclineMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmationRequest'
+            examples:
+              confirm:
+                summary: Confirmar
+                value:
+                  playerId: player-1
+                  decision: CONFIRMED
+              decline:
+                summary: Rechazar
+                value:
+                  playerId: player-1
+                  decision: DECLINED
+      responses:
+        '200':
+          description: Decisión registrada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmationResult'
+              examples:
+                pending:
+                  summary: Aún faltan confirmaciones
+                  value:
+                    matchId: match-123
+                    playerId: player-1
+                    decision: CONFIRMED
+                    matchStatus: COMPLETED
+                confirmed:
+                  summary: Los cuatro jugadores han confirmado
+                  value:
+                    matchId: match-123
+                    playerId: player-4
+                    decision: CONFIRMED
+                    matchStatus: CONFIRMED
+                cancelled:
+                  summary: Un jugador ha rechazado
+                  value:
+                    matchId: match-123
+                    playerId: player-3
+                    decision: DECLINED
+                    matchStatus: CANCELLED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - Match status must be COMPLETED.
+        - Player must belong to the match.
+        - Decision must be CONFIRMED or DECLINED.
+        - Any DECLINED decision transitions the match to CANCELLED.
+        - Four CONFIRMED decisions transition the match to CONFIRMED.
+
+components:
+  parameters:
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      description: Identificador único del partido.
+      schema:
+        type: string
+        minLength: 1
+        example: match-123
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      description: Identificador único del jugador.
+      schema:
+        type: string
+        minLength: 1
+        example: player-1
+    DateTimeQuery:
+      name: dateTime
+      in: query
+      required: true
+      description: Fecha y hora del partido en formato ISO-8601 con offset. Puede haber múltiples partidos para el mismo valor.
+      schema:
+        type: string
+        format: date-time
+        example: '2026-10-10T18:00:00+02:00'
+  schemas:
+    MatchStatus:
+      type: string
+      enum: [OPEN, COMPLETED, CONFIRMED, CANCELLED]
+    ConfirmationStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, DECLINED]
+    ConfirmationDecision:
+      type: string
+      enum: [CONFIRMED, DECLINED]
+    MatchPlayer:
+      type: object
+      required: [playerId, slot]
+      properties:
+        playerId:
+          type: string
+          example: player-1
+        slot:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 1
+        confirmation:
+          type: string
+          nullable: true
+          enum: [PENDING, CONFIRMED, DECLINED]
+          description: Null mientras el partido está OPEN.
+    Match:
+      type: object
+      required: [id, dateTime, status, players]
+      properties:
+        id:
+          type: string
+          example: match-123
+        dateTime:
+          type: string
+          format: date-time
+          example: '2026-10-10T18:00:00+02:00'
+        status:
+          $ref: '#/components/schemas/MatchStatus'
+        players:
+          type: array
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/MatchPlayer'
+    CreateMatchRequest:
+      type: object
+      required: [dateTime]
+      properties:
+        dateTime:
+          type: string
+          format: date-time
+          example: '2026-10-10T18:00:00+02:00'
+    JoinMatchRequest:
+      type: object
+      required: [playerId]
+      properties:
+        playerId:
+          type: string
+          minLength: 1
+          example: player-2
+    JoinMatchResult:
+      type: object
+      required: [matchId, playerId, slot, matchStatus]
+      properties:
+        matchId:
+          type: string
+          example: match-123
+        playerId:
+          type: string
+          example: player-2
+        slot:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 2
+        matchStatus:
+          $ref: '#/components/schemas/MatchStatus'
+        confirmation:
+          type: string
+          nullable: true
+          enum: [PENDING, CONFIRMED, DECLINED]
+          example: null
+    ConfirmationRequest:
+      type: object
+      required: [playerId, decision]
+      properties:
+        playerId:
+          type: string
+          minLength: 1
+          example: player-1
+        decision:
+          $ref: '#/components/schemas/ConfirmationDecision'
+    ConfirmationResult:
+      type: object
+      required: [matchId, playerId, decision, matchStatus]
+      properties:
+        matchId:
+          type: string
+          example: match-123
+        playerId:
+          type: string
+          example: player-1
+        decision:
+          $ref: '#/components/schemas/ConfirmationDecision'
+        matchStatus:
+          $ref: '#/components/schemas/MatchStatus'
+    MatchListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Match'
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: MATCH_NOT_FOUND
+        message:
+          type: string
+          example: Match 'match-123' was not found.
+        details:
+          type: object
+          additionalProperties: true
+  responses:
+    BadRequest:
+      description: La petición no es válida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: INVALID_REQUEST
+            message: The request is invalid.
+    NotFound:
+      description: El recurso solicitado no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: MATCH_NOT_FOUND
+            message: Match 'match-123' was not found.
+    Conflict:
+      description: La operación entra en conflicto con el estado actual del recurso o una regla de negocio.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            matchNotOpen:
+              value:
+                code: MATCH_NOT_OPEN
+                message: Match 'match-123' is not open for registration.
+            matchFull:
+              value:
+                code: MATCH_FULL
+                message: Match 'match-123' already has 4 players.
+            duplicatePlayer:
+              value:
+                code: PLAYER_ALREADY_REGISTERED
+                message: Player 'player-1' is already registered in match 'match-123'.
+            immutableMatch:
+              value:
+                code: MATCH_IMMUTABLE
+                message: A CONFIRMED match cannot be modified.
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Autenticación mediante Bearer JWT.
+security:
+  - bearerAuth: []
