@@ -2,30 +2,30 @@ import { Request, Response } from "express";
 import {
 	CreateMatchUseCase,
 	InvalidMatchDateTimeError,
-} from "../../domain/CreateMatchUseCase";
+} from "../../domain/Match/CreateMatchUseCase";
 import {
 	GetMatchesByDateTimeUseCase,
 	MissingDateTimeQueryError,
-} from "../../domain/GetMatchesByDateTimeUseCase";
+} from "../../domain/Match/GetMatchesByDateTimeUseCase";
 import {
 	GetMatchByIdUseCase,
 	MatchNotFoundError,
-} from "../../domain/GetMatchByIdUseCase";
+} from "../../domain/Match/GetMatchByIdUseCase";
 import {
 	JoinMatchUseCase,
 	MatchFullError,
 	PlayerAlreadyRegisteredError,
-} from "../../domain/JoinMatchUseCase";
+} from "../../domain/Match/JoinMatchUseCase";
 import {
 	LeaveMatchUseCase,
 	MatchNotOpenError,
 	PlayerNotInMatchError,
-} from "../../domain/LeaveMatchUseCase";
+} from "../../domain/Match/LeaveMatchUseCase";
 import {
 	ConfirmMatchUseCase,
 	MatchNotCompletedError,
 	PlayerNotInMatchError as PlayerNotInConfirmationError,
-} from "../../domain/ConfirmMatchUseCase";
+} from "../../domain/Match/ConfirmMatchUseCase";
 
 export class MatchesController {
 	constructor(

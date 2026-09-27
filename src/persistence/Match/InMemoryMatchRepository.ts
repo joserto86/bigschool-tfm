@@ -1,4 +1,4 @@
-import { Match } from "../types/match";
+import { Match } from "../../types/match";
 import { MatchRepository } from "./IMatchRepository";
 
 export class InMemoryMatchRepository implements MatchRepository {

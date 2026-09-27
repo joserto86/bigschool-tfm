@@ -1,5 +1,5 @@
-import { Match } from "../types/match";
-import { MatchRepository } from "../persistence/IMatchRepository";
+import { Match } from "../../types/match";
+import { MatchRepository } from "../../persistence/Match/IMatchRepository";
 
 export interface GetMatchesByDateTimeInput {
 	dateTime: unknown;

@@ -1,4 +1,4 @@
-import { MatchRepository } from "../persistence/IMatchRepository";
+import { MatchRepository } from "../../persistence/Match/IMatchRepository";
 import { MatchNotFoundError } from "./GetMatchByIdUseCase";
 
 export interface LeaveMatchInput {

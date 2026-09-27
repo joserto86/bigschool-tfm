@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { CreateMatchUseCase } from "../domain/CreateMatchUseCase";
-import { GetMatchesByDateTimeUseCase } from "../domain/GetMatchesByDateTimeUseCase";
-import { GetMatchByIdUseCase } from "../domain/GetMatchByIdUseCase";
-import { JoinMatchUseCase } from "../domain/JoinMatchUseCase";
-import { LeaveMatchUseCase } from "../domain/LeaveMatchUseCase";
-import { ConfirmMatchUseCase } from "../domain/ConfirmMatchUseCase";
+import { CreateMatchUseCase } from "../domain/Match/CreateMatchUseCase";
+import { GetMatchesByDateTimeUseCase } from "../domain/Match/GetMatchesByDateTimeUseCase";
+import { GetMatchByIdUseCase } from "../domain/Match/GetMatchByIdUseCase";
+import { JoinMatchUseCase } from "../domain/Match/JoinMatchUseCase";
+import { LeaveMatchUseCase } from "../domain/Match/LeaveMatchUseCase";
+import { ConfirmMatchUseCase } from "../domain/Match/ConfirmMatchUseCase";
 import { MatchesController } from "./controllers/MatchesController";
 
 export function createMatchesRouter(

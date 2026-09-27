@@ -32,6 +32,8 @@ tags:
     description: Inscripción y desinscripción de jugadores
   - name: Confirmations
     description: Confirmación o rechazo de partidos completados
+  - name: Auth
+    description: Autenticación y gestión de credenciales
 
 paths:
   /matches:
@@ -270,6 +272,94 @@ paths:
         - Any DECLINED decision transitions the match to CANCELLED.
         - Four CONFIRMED decisions transition the match to CONFIRMED.
 
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      description: Autentica al usuario mediante email y contraseña.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: jugador@example.com
+              password: contraseña
+      responses:
+        '200':
+          description: Autenticación correcta; devuelve un JWT de acceso y un refresh token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              example:
+                accessToken: <jwt>
+                tokenType: Bearer
+                expiresIn: 900
+                refreshToken: <token-opaco>
+                refreshTokenExpiresAt: '2026-10-27T12:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password:
+    post:
+      tags: [Auth]
+      summary: Cambiar contraseña
+      description: |
+        Cambia la contraseña del usuario autenticado. La identidad se obtiene del claim `sub` del JWT.
+
+        Al completar el cambio se revocan los refresh tokens activos del usuario. Los JWT de acceso ya emitidos siguen siendo válidos hasta expirar.
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            example:
+              currentPassword: contraseña-actual
+              newPassword: contraseña-nueva
+      responses:
+        '204':
+          description: Contraseña cambiada correctamente.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar tokens
+      description: |
+        Consume el refresh token presentado y devuelve un nuevo par de tokens. El refresh token se rota de forma atómica.
+
+        Un refresh token reutilizado invalida su familia de tokens.
+      operationId: refreshTokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              refreshToken: <token-opaco>
+      responses:
+        '200':
+          description: Tokens renovados correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
 components:
   parameters:
     MatchId:
@@ -300,6 +390,61 @@ components:
         format: date-time
         example: '2026-10-10T18:00:00+02:00'
   schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: jugador@example.com
+        password:
+          type: string
+          format: password
+          minLength: 1
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          minLength: 1
+        newPassword:
+          type: string
+          format: password
+          minLength: 1
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          description: Refresh token opaco de un solo uso.
+    TokenPair:
+      type: object
+      required: [accessToken, tokenType, expiresIn, refreshToken, refreshTokenExpiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: JWT de acceso.
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Tiempo de vida del JWT de acceso en segundos.
+          example: 900
+        refreshToken:
+          type: string
+          description: Refresh token opaco; se almacena en el servidor únicamente como hash.
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de expiración del refresh token.
+          example: '2026-10-27T12:00:00Z'
     MatchStatus:
       type: string
       enum: [OPEN, COMPLETED, CONFIRMED, CANCELLED]
@@ -446,6 +591,15 @@ components:
           example:
             code: MATCH_NOT_FOUND
             message: Match 'match-123' was not found.
+    Unauthorized:
+      description: Credenciales, access token o refresh token no válidos.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: AUTHENTICATION_FAILED
+            message: Authentication failed.
     Conflict:
       description: La operación entra en conflicto con el estado actual del recurso o una regla de negocio.
       content:
