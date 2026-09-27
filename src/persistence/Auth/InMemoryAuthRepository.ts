@@ -1,19 +1,33 @@
+import { hashPasswordSync } from "../../domain/Auth/Password";
 import { Player } from "../../types/player";
-import { AuthRepository, RefreshTokenRecord } from "./IAuthRepository";
+import { IAuthRepository, IRefreshTokenRecord } from "./IAuthRepository";
 
-export class InMemoryAuthRepository implements AuthRepository {
+const DEVELOPMENT_TEST_USER: Player | undefined =
+	process.env.NODE_ENV === "production"
+		? undefined
+		: {
+				id: "test-player",
+				name: "Test Player",
+				email: "player@example.com",
+				passwordHash: hashPasswordSync("correct-password"),
+				isAdmin: false,
+			};
+
+export class InMemoryAuthRepository implements IAuthRepository {
 	private readonly users: Player[];
-	private readonly refreshTokens = new Map<string, RefreshTokenRecord>();
+	private readonly refreshTokens = new Map<string, IRefreshTokenRecord>();
 
 	constructor(initialUsers: readonly Player[] = []) {
 		this.users = [...initialUsers];
-		this.users.push({
-			id: "1",
-			email: "john@doe.com",
-			passwordHash: "hashedpassword",
-			isAdmin: false,
-			name: "John Doe",
-		});
+
+		if (
+			DEVELOPMENT_TEST_USER &&
+			!this.users.some(
+				(user) => user.email.trim().toLowerCase() === "player@example.com",
+			)
+		) {
+			this.users.push({ ...DEVELOPMENT_TEST_USER });
+		}
 	}
 
 	findUserByEmail(email: string): Player | undefined {
@@ -34,14 +48,14 @@ export class InMemoryAuthRepository implements AuthRepository {
 		}
 	}
 
-	saveRefreshToken(record: RefreshTokenRecord): void {
+	saveRefreshToken(record: IRefreshTokenRecord): void {
 		this.refreshTokens.set(record.tokenHash, {
 			...record,
 			expiresAt: new Date(record.expiresAt),
 		});
 	}
 
-	findRefreshTokenByHash(tokenHash: string): RefreshTokenRecord | undefined {
+	findRefreshTokenByHash(tokenHash: string): IRefreshTokenRecord | undefined {
 		const record = this.refreshTokens.get(tokenHash);
 		return record
 			? { ...record, expiresAt: new Date(record.expiresAt) }
@@ -50,7 +64,7 @@ export class InMemoryAuthRepository implements AuthRepository {
 
 	rotateRefreshToken(
 		presentedTokenHash: string,
-		replacement: RefreshTokenRecord,
+		replacement: IRefreshTokenRecord,
 		now: Date,
 	): boolean {
 		const presented = this.refreshTokens.get(presentedTokenHash);

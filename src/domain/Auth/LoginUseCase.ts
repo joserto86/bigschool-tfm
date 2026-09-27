@@ -3,10 +3,18 @@ import { SignJWT } from "jose";
 import { AuthRepository } from "../../persistence/Auth/IAuthRepository";
 import { verifyPasswordOrDummy } from "./Password";
 
-const ACCESS_TOKEN_EXPIRES_IN = 900;
-const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 30 * 24 * 60 * 60;
-const JWT_ISSUER = "satispadel-api";
-const JWT_AUDIENCE = "satispadel-client";
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN
+	? parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
+	: 900;
+
+const REFRESH_TOKEN_EXPIRES_IN_SECONDS = process.env
+	.REFRESH_TOKEN_EXPIRES_IN_SECONDS
+	? parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS, 10)
+	: 30 * 24 * 60 * 60;
+
+const JWT_ISSUER = process.env.JWT_ISSUER ?? "satispadel-api";
+
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE ?? "satispadel-client";
 
 function isValidEmail(email: string): boolean {
 	const normalizedEmail = email.trim();
@@ -70,6 +78,7 @@ export class LoginUseCase {
 			input.password,
 			user?.passwordHash,
 		);
+
 		if (!user || !passwordMatches) {
 			throw new AuthenticationFailedError();
 		}

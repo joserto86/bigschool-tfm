@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 
 const PASSWORD_KEY_LENGTH = 64;
 const PASSWORD_SALT_LENGTH = 16;
@@ -19,6 +19,12 @@ function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
 export async function hashPassword(password: string): Promise<string> {
 	const salt = randomBytes(PASSWORD_SALT_LENGTH);
 	const key = await deriveKey(password, salt);
+	return `scrypt$${salt.toString("base64url")}$${key.toString("base64url")}`;
+}
+
+export function hashPasswordSync(password: string): string {
+	const salt = randomBytes(PASSWORD_SALT_LENGTH);
+	const key = scryptSync(password, salt, PASSWORD_KEY_LENGTH);
 	return `scrypt$${salt.toString("base64url")}$${key.toString("base64url")}`;
 }
 

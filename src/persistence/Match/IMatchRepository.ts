@@ -1,6 +1,6 @@
 import { Match } from "../../types/match";
 
-export interface MatchRepository {
+export interface IMatchRepository {
 	create(match: Match): Match;
 	findByDateTime(dateTime: string): Match[];
 	findById(matchId: string): Match | undefined;

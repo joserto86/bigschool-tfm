@@ -1,6 +1,6 @@
 import { Player } from "../../types/player";
 
-export interface RefreshTokenRecord {
+export interface IRefreshTokenRecord {
 	tokenHash: string;
 	playerId: string;
 	familyId: string;
@@ -8,15 +8,15 @@ export interface RefreshTokenRecord {
 	revoked: boolean;
 }
 
-export interface AuthRepository {
+export interface IAuthRepository {
 	findUserByEmail(email: string): Player | undefined;
 	findUserById(playerId: string): Player | undefined;
 	updatePasswordHash(playerId: string, passwordHash: string): void;
-	saveRefreshToken(record: RefreshTokenRecord): void;
-	findRefreshTokenByHash(tokenHash: string): RefreshTokenRecord | undefined;
+	saveRefreshToken(record: IRefreshTokenRecord): void;
+	findRefreshTokenByHash(tokenHash: string): IRefreshTokenRecord | undefined;
 	rotateRefreshToken(
 		presentedTokenHash: string,
-		replacement: RefreshTokenRecord,
+		replacement: IRefreshTokenRecord,
 		now: Date,
 	): boolean;
 	revokeActiveRefreshTokens(playerId: string): void;

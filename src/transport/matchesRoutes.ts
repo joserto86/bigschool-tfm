@@ -6,16 +6,18 @@ import { JoinMatchUseCase } from "../domain/Match/JoinMatchUseCase";
 import { LeaveMatchUseCase } from "../domain/Match/LeaveMatchUseCase";
 import { ConfirmMatchUseCase } from "../domain/Match/ConfirmMatchUseCase";
 import { MatchesController } from "./controllers/MatchesController";
+import { IMatchRepository } from "../persistence/Match/IMatchRepository";
 
-export function createMatchesRouter(
-	createMatchUseCase: CreateMatchUseCase,
-	getMatchesByDateTimeUseCase: GetMatchesByDateTimeUseCase,
-	getMatchByIdUseCase: GetMatchByIdUseCase,
-	joinMatchUseCase: JoinMatchUseCase,
-	leaveMatchUseCase: LeaveMatchUseCase,
-	confirmMatchUseCase: ConfirmMatchUseCase,
-): Router {
+export function createMatchesRouter(matchRepository: IMatchRepository): Router {
 	const router = Router();
+
+	const createMatchUseCase = new CreateMatchUseCase(matchRepository);
+	const getMatchesByDateTimeUseCase = new GetMatchesByDateTimeUseCase(matchRepository);
+	const getMatchByIdUseCase = new GetMatchByIdUseCase(matchRepository);
+	const joinMatchUseCase = new JoinMatchUseCase(matchRepository);
+	const leaveMatchUseCase = new LeaveMatchUseCase(matchRepository);
+	const confirmMatchUseCase = new ConfirmMatchUseCase(matchRepository);
+
 	const matchesController = new MatchesController(
 		createMatchUseCase,
 		getMatchesByDateTimeUseCase,
@@ -25,15 +27,12 @@ export function createMatchesRouter(
 		confirmMatchUseCase,
 	);
 
-	router.post("/matches", matchesController.createMatch);
-	router.get("/matches", matchesController.getMatches);
-	router.get("/matches/:matchId", matchesController.getMatchById);
-	router.post("/matches/:matchId/players", matchesController.joinMatch);
-	router.delete(
-		"/matches/:matchId/players/:playerId",
-		matchesController.leaveMatch,
-	);
-	router.post("/matches/:matchId/confirmation", matchesController.confirmMatch);
+	router.post("/", matchesController.createMatch);
+	router.get("/", matchesController.getMatches);
+	router.get("/:matchId", matchesController.getMatchById);
+	router.post("/:matchId/players", matchesController.joinMatch);
+	router.delete("/:matchId/players/:playerId", matchesController.leaveMatch);
+	router.post("/:matchId/confirmation", matchesController.confirmMatch);
 
 	return router;
 }

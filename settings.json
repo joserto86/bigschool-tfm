@@ -1,0 +1,16 @@
+{
+	"editor.tabSize": 2,
+	"editor.insertSpaces": true,
+	"editor.formatOnSave": true,
+	"files.insertFinalNewline": true,
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/dist": true
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/dist": true
+	},
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.enablePromptUseWorkspaceTsdk": true
+}

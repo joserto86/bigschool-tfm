@@ -1,7 +1,7 @@
 import { Match } from "../../types/match";
-import { MatchRepository } from "./IMatchRepository";
+import { IMatchRepository } from "./IMatchRepository";
 
-export class InMemoryMatchRepository implements MatchRepository {
+export class InMemoryMatchRepository implements IMatchRepository {
 	private readonly matches: Match[] = [];
 
 	create(match: Match): Match {
