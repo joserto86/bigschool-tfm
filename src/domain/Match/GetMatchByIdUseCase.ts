@@ -1,5 +1,5 @@
 import { Match } from "../../types/match";
-import { MatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
 
 export interface GetMatchByIdInput {
 	matchId: string;
@@ -13,7 +13,7 @@ export class MatchNotFoundError extends Error {
 }
 
 export class GetMatchByIdUseCase {
-	constructor(private readonly matchRepository: MatchRepository) {}
+	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	execute(input: GetMatchByIdInput): Match {
 		const match = this.matchRepository.findById(input.matchId);

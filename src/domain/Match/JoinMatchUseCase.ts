@@ -1,4 +1,4 @@
-import { MatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
 import { MatchNotFoundError } from "./GetMatchByIdUseCase";
 
 export interface JoinMatchInput {
@@ -29,7 +29,7 @@ export class MatchFullError extends Error {
 }
 
 export class JoinMatchUseCase {
-	constructor(private readonly matchRepository: MatchRepository) {}
+	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	execute(input: JoinMatchInput): JoinMatchResult {
 		const { matchId, playerId } = input;

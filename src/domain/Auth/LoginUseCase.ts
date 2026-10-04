@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
-import { AuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
 import { verifyPasswordOrDummy } from "./Password";
+import { jwtAudience, jwtIssuer } from "./jwtConfig";
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN
 	? parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
@@ -11,10 +12,6 @@ const REFRESH_TOKEN_EXPIRES_IN_SECONDS = process.env
 	.REFRESH_TOKEN_EXPIRES_IN_SECONDS
 	? parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS, 10)
 	: 30 * 24 * 60 * 60;
-
-const JWT_ISSUER = process.env.JWT_ISSUER ?? "satispadel-api";
-
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE ?? "satispadel-client";
 
 function isValidEmail(email: string): boolean {
 	const normalizedEmail = email.trim();
@@ -54,7 +51,7 @@ export class AuthenticationFailedError extends Error {
 
 export class LoginUseCase {
 	constructor(
-		private readonly authRepository: AuthRepository,
+		private readonly authRepository: IAuthRepository,
 		private readonly signingKey: Uint8Array,
 	) {}
 
@@ -86,8 +83,8 @@ export class LoginUseCase {
 		const accessToken = await new SignJWT({})
 			.setProtectedHeader({ alg: "HS256" })
 			.setSubject(user.id)
-			.setIssuer(JWT_ISSUER)
-			.setAudience(JWT_AUDIENCE)
+			.setIssuer(jwtIssuer())
+			.setAudience(jwtAudience())
 			.setIssuedAt()
 			.setExpirationTime("15m")
 			.sign(this.signingKey);

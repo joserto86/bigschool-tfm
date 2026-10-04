@@ -1,16 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
-import { AuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
 import { AuthenticationFailedError, LoginResult } from "./LoginUseCase";
+import { jwtAudience, jwtIssuer } from "./jwtConfig";
 
 const ACCESS_TOKEN_EXPIRES_IN = 900;
 const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 30 * 24 * 60 * 60;
-const JWT_ISSUER = "satispadel-api";
-const JWT_AUDIENCE = "satispadel-client";
 
 export class RefreshTokenUseCase {
 	constructor(
-		private readonly authRepository: AuthRepository,
+		private readonly authRepository: IAuthRepository,
 		private readonly signingKey: Uint8Array,
 	) {}
 
@@ -56,8 +55,8 @@ export class RefreshTokenUseCase {
 		const accessToken = await new SignJWT({})
 			.setProtectedHeader({ alg: "HS256" })
 			.setSubject(presented.playerId)
-			.setIssuer(JWT_ISSUER)
-			.setAudience(JWT_AUDIENCE)
+			.setIssuer(jwtIssuer())
+			.setAudience(jwtAudience())
 			.setIssuedAt()
 			.setExpirationTime("15m")
 			.sign(this.signingKey);

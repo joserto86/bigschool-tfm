@@ -46,6 +46,8 @@ paths:
         Se permite crear varios partidos con la misma fecha y hora.
         La API genera el matchId.
       operationId: createMatch
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -68,6 +70,8 @@ paths:
                 players: []
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
     get:
       tags: [Matches]
@@ -77,6 +81,8 @@ paths:
 
         Puede devolver cero, uno o varios partidos porque dateTime no es único.
       operationId: getMatchesByDateTime
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/DateTimeQuery'
       responses:
@@ -110,6 +116,8 @@ paths:
                         confirmation: PENDING
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /matches/{matchId}:
     parameters:
@@ -118,6 +126,8 @@ paths:
       tags: [Matches]
       summary: Obtener un partido
       operationId: getMatch
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Partido encontrado
@@ -125,6 +135,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Match'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -142,6 +154,8 @@ paths:
         Si la inscripción del jugador ocupa el cuarto hueco disponible,
         el partido pasa automáticamente de OPEN a COMPLETED.
       operationId: joinMatch
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -165,6 +179,8 @@ paths:
                 confirmation: null
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -189,9 +205,13 @@ paths:
         Solo está permitido si el partido está en estado OPEN.
         Si el jugador era el único inscrito, el partido completo se elimina.
       operationId: leaveMatch
+      security:
+        - bearerAuth: []
       responses:
         '204':
           description: Inscripción eliminada correctamente.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -213,6 +233,8 @@ paths:
         - DECLINED: el partido pasa inmediatamente a CANCELLED.
         - CONFIRMED: si los cuatro jugadores están CONFIRMED, el partido pasa a CONFIRMED.
       operationId: confirmOrDeclineMatch
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -261,6 +283,8 @@ paths:
                     matchStatus: CANCELLED
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -315,6 +339,8 @@ paths:
 
         Al completar el cambio se revocan los refresh tokens activos del usuario. Los JWT de acceso ya emitidos siguen siendo válidos hasta expirar.
       operationId: changePassword
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -628,6 +654,12 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Autenticación mediante Bearer JWT.
+      description: |
+        Autenticación mediante Bearer JWT de acceso (`Authorization: Bearer <token>`).
+
+        El servidor verifica la firma (HS256), el emisor, la audiencia, la expiración y la presencia del claim `sub`.
+        Si el token falta, está mal formado o no es válido, responde `401` con el error `AUTHENTICATION_FAILED`.
+# Seguridad por defecto: todas las operaciones requieren JWT salvo que declaren `security: []`.
+# Rutas públicas: POST /auth/login y POST /auth/refresh.
 security:
   - bearerAuth: []

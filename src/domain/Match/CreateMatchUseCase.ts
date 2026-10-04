@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { Match } from "../../types/match";
-import { MatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
 
 export interface CreateMatchInput {
 	dateTime: unknown;
@@ -14,7 +14,7 @@ export class InvalidMatchDateTimeError extends Error {
 }
 
 export class CreateMatchUseCase {
-	constructor(private readonly matchRepository: MatchRepository) {}
+	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	execute(input: CreateMatchInput): Match {
 		const { dateTime } = input;
