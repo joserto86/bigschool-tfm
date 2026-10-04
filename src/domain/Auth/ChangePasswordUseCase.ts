@@ -1,10 +1,7 @@
-import { jwtVerify } from "jose";
-import { AuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
 import { hashPassword, verifyPassword } from "./Password";
 import { AuthenticationFailedError } from "./LoginUseCase";
 
-const JWT_ISSUER = "satispadel-api";
-const JWT_AUDIENCE = "satispadel-client";
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
 
@@ -16,30 +13,12 @@ export class InvalidPasswordRequestError extends Error {
 }
 
 export class ChangePasswordUseCase {
-	constructor(
-		private readonly authRepository: AuthRepository,
-		private readonly signingKey: Uint8Array,
-	) {}
+	constructor(private readonly authRepository: IAuthRepository) {}
 
 	async execute(
-		accessToken: string,
+		playerId: string,
 		input: { currentPassword: unknown; newPassword: unknown },
 	): Promise<void> {
-		let playerId: string;
-		try {
-			const { payload } = await jwtVerify(accessToken, this.signingKey, {
-				algorithms: ["HS256"],
-				issuer: JWT_ISSUER,
-				audience: JWT_AUDIENCE,
-			});
-			if (!payload.sub) {
-				throw new Error("Missing subject");
-			}
-			playerId = payload.sub;
-		} catch {
-			throw new AuthenticationFailedError();
-		}
-
 		if (
 			typeof input.currentPassword !== "string" ||
 			input.currentPassword.length === 0 ||

@@ -1,4 +1,4 @@
-import { MatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
 import { MatchNotFoundError } from "./GetMatchByIdUseCase";
 
 export interface ConfirmMatchInput {
@@ -29,7 +29,7 @@ export class PlayerNotInMatchError extends Error {
 }
 
 export class ConfirmMatchUseCase {
-	constructor(private readonly matchRepository: MatchRepository) {}
+	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	execute(input: ConfirmMatchInput): ConfirmMatchResult {
 		const { matchId, playerId, decision } = input;

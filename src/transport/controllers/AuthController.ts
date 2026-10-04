@@ -44,12 +44,8 @@ export class AuthController {
 	};
 
 	changePassword = async (req: Request, res: Response): Promise<void> => {
-		const authorization = req.header("authorization");
-		const separator = authorization?.indexOf(" ") ?? -1;
-		const scheme = separator > 0 ? authorization?.slice(0, separator) : "";
-		const accessToken =
-			separator > 0 ? authorization?.slice(separator).trim() : "";
-		if (scheme?.toLowerCase() !== "bearer" || !accessToken) {
+		const playerId = req.auth?.playerId;
+		if (!playerId) {
 			res.status(401).json({
 				code: "AUTHENTICATION_FAILED",
 				message: "Authentication failed.",
@@ -58,7 +54,7 @@ export class AuthController {
 		}
 
 		try {
-			await this.changePasswordUseCase.execute(accessToken, {
+			await this.changePasswordUseCase.execute(playerId, {
 				currentPassword: req.body?.currentPassword,
 				newPassword: req.body?.newPassword,
 			});

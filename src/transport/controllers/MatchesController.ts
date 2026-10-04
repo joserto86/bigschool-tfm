@@ -76,7 +76,7 @@ export class MatchesController {
 	getMatchById = (req: Request, res: Response): void => {
 		try {
 			const match = this.getMatchByIdUseCase.execute({
-				matchId: req.params.matchId,
+				matchId: req.params.matchId as string,
 			});
 			res.status(200).json(match);
 		} catch (error) {
@@ -94,7 +94,7 @@ export class MatchesController {
 	joinMatch = (req: Request, res: Response): void => {
 		try {
 			const result = this.joinMatchUseCase.execute({
-				matchId: req.params.matchId,
+				matchId: req.params.matchId as string,
 				playerId: req.body?.playerId,
 			});
 			res.status(201).json(result);
@@ -127,8 +127,8 @@ export class MatchesController {
 	leaveMatch = (req: Request, res: Response): void => {
 		try {
 			this.leaveMatchUseCase.execute({
-				matchId: req.params.matchId,
-				playerId: req.params.playerId,
+				matchId: req.params.matchId as string,
+				playerId: req.params.playerId as string,
 			});
 			res.status(204).send();
 		} catch (error) {
@@ -156,7 +156,7 @@ export class MatchesController {
 	confirmMatch = (req: Request, res: Response): void => {
 		try {
 			const result = this.confirmMatchUseCase.execute({
-				matchId: req.params.matchId,
+				matchId: req.params.matchId as string,
 				playerId: req.body?.playerId,
 				decision: req.body?.decision,
 			});

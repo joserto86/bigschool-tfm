@@ -1,4 +1,4 @@
-import { MatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
 import { MatchNotFoundError } from "./GetMatchByIdUseCase";
 
 export interface LeaveMatchInput {
@@ -21,7 +21,7 @@ export class MatchNotOpenError extends Error {
 }
 
 export class LeaveMatchUseCase {
-	constructor(private readonly matchRepository: MatchRepository) {}
+	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	execute(input: LeaveMatchInput): void {
 		const { matchId, playerId } = input;
