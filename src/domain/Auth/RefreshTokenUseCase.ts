@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
-import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
 import { AuthenticationFailedError, LoginResult } from "./LoginUseCase";
 import { jwtAudience, jwtIssuer } from "./jwtConfig";
 
@@ -25,7 +25,7 @@ export class RefreshTokenUseCase {
 			.update(input.refreshToken)
 			.digest("hex");
 		const presented =
-			this.authRepository.findRefreshTokenByHash(presentedTokenHash);
+			await this.authRepository.findRefreshTokenByHash(presentedTokenHash);
 		if (!presented) {
 			throw new AuthenticationFailedError();
 		}
@@ -37,7 +37,7 @@ export class RefreshTokenUseCase {
 		const replacementHash = createHash("sha256")
 			.update(refreshToken)
 			.digest("hex");
-		const rotated = this.authRepository.rotateRefreshToken(
+		const rotated = await this.authRepository.rotateRefreshToken(
 			presentedTokenHash,
 			{
 				tokenHash: replacementHash,

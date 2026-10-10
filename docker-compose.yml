@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: satispadel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-satispadel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-satispadel}
+      POSTGRES_DB: ${POSTGRES_DB:-satispadel}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/db:/var/lib/postgresql/data
+

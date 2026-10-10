@@ -1,5 +1,5 @@
 import { Match } from "../../types/match";
-import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 
 export interface GetMatchesByDateTimeInput {
 	dateTime: unknown;
@@ -15,7 +15,7 @@ export class MissingDateTimeQueryError extends Error {
 export class GetMatchesByDateTimeUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
-	execute(input: GetMatchesByDateTimeInput): Match[] {
+	async execute(input: GetMatchesByDateTimeInput): Promise<Match[]> {
 		const { dateTime } = input;
 
 		if (typeof dateTime !== "string" || dateTime.trim() === "") {

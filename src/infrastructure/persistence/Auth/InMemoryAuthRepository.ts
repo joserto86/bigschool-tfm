@@ -1,5 +1,5 @@
-import { hashPasswordSync } from "../../domain/Auth/Password";
-import { Player } from "../../types/player";
+import { hashPasswordSync } from "../../../domain/Auth/Password";
+import { Player } from "../../../types/player";
 import { IAuthRepository, IRefreshTokenRecord } from "./IAuthRepository";
 
 const DEVELOPMENT_TEST_USER: Player | undefined =
@@ -30,43 +30,48 @@ export class InMemoryAuthRepository implements IAuthRepository {
 		}
 	}
 
-	findUserByEmail(email: string): Player | undefined {
+	async findUserByEmail(email: string): Promise<Player | undefined> {
 		const normalizedEmail = email.trim().toLowerCase();
 		return this.users.find(
 			(user) => user.email.trim().toLowerCase() === normalizedEmail,
 		);
 	}
 
-	findUserById(playerId: string): Player | undefined {
+	async findUserById(playerId: string): Promise<Player | undefined> {
 		return this.users.find((user) => user.id === playerId);
 	}
 
-	updatePasswordHash(playerId: string, passwordHash: string): void {
-		const user = this.findUserById(playerId);
+	async updatePasswordHash(
+		playerId: string,
+		passwordHash: string,
+	): Promise<void> {
+		const user = this.users.find((entry) => entry.id === playerId);
 		if (user) {
 			user.passwordHash = passwordHash;
 		}
 	}
 
-	saveRefreshToken(record: IRefreshTokenRecord): void {
+	async saveRefreshToken(record: IRefreshTokenRecord): Promise<void> {
 		this.refreshTokens.set(record.tokenHash, {
 			...record,
 			expiresAt: new Date(record.expiresAt),
 		});
 	}
 
-	findRefreshTokenByHash(tokenHash: string): IRefreshTokenRecord | undefined {
+	async findRefreshTokenByHash(
+		tokenHash: string,
+	): Promise<IRefreshTokenRecord | undefined> {
 		const record = this.refreshTokens.get(tokenHash);
 		return record
 			? { ...record, expiresAt: new Date(record.expiresAt) }
 			: undefined;
 	}
 
-	rotateRefreshToken(
+	async rotateRefreshToken(
 		presentedTokenHash: string,
 		replacement: IRefreshTokenRecord,
 		now: Date,
-	): boolean {
+	): Promise<boolean> {
 		const presented = this.refreshTokens.get(presentedTokenHash);
 		if (!presented) {
 			return false;
@@ -87,11 +92,11 @@ export class InMemoryAuthRepository implements IAuthRepository {
 		}
 
 		presented.revoked = true;
-		this.saveRefreshToken(replacement);
+		await this.saveRefreshToken(replacement);
 		return true;
 	}
 
-	revokeActiveRefreshTokens(playerId: string): void {
+	async revokeActiveRefreshTokens(playerId: string): Promise<void> {
 		for (const record of this.refreshTokens.values()) {
 			if (record.playerId === playerId && !record.revoked) {
 				record.revoked = true;

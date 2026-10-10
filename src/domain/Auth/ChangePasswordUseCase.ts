@@ -1,4 +1,4 @@
-import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
 import { hashPassword, verifyPassword } from "./Password";
 import { AuthenticationFailedError } from "./LoginUseCase";
 
@@ -31,7 +31,7 @@ export class ChangePasswordUseCase {
 			);
 		}
 
-		const user = this.authRepository.findUserById(playerId);
+		const user = await this.authRepository.findUserById(playerId);
 		if (
 			!user ||
 			!(await verifyPassword(input.currentPassword, user.passwordHash))
@@ -40,7 +40,7 @@ export class ChangePasswordUseCase {
 		}
 
 		const passwordHash = await hashPassword(input.newPassword);
-		this.authRepository.updatePasswordHash(playerId, passwordHash);
-		this.authRepository.revokeActiveRefreshTokens(playerId);
+		await this.authRepository.updatePasswordHash(playerId, passwordHash);
+		await this.authRepository.revokeActiveRefreshTokens(playerId);
 	}
 }

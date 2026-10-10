@@ -9,12 +9,19 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:generate": "prisma generate --schema=./src/infrastructure/database/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=./src/infrastructure/database/prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema=./src/infrastructure/database/prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=./src/infrastructure/database/prisma/schema.prisma"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.3",
     "@types/supertest": "^7.2.1",
+    "prisma": "^6.3.1",
     "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.13",
@@ -22,6 +29,7 @@
     "vitest": "^5.0.1"
   },
   "dependencies": {
+    "@prisma/client": "^6.3.1",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "jose": "^6.2.12",

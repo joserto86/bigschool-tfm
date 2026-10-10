@@ -3,12 +3,12 @@ import {
 	AuthenticationFailedError,
 	InvalidLoginRequestError,
 	LoginUseCase,
-} from "../../domain/Auth/LoginUseCase";
+} from "../../../domain/Auth/LoginUseCase";
 import {
 	ChangePasswordUseCase,
 	InvalidPasswordRequestError,
-} from "../../domain/Auth/ChangePasswordUseCase";
-import { RefreshTokenUseCase } from "../../domain/Auth/RefreshTokenUseCase";
+} from "../../../domain/Auth/ChangePasswordUseCase";
+import { RefreshTokenUseCase } from "../../../domain/Auth/RefreshTokenUseCase";
 
 export class AuthController {
 	constructor(

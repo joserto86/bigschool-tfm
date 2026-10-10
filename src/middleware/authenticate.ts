@@ -1,7 +1,7 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import { jwtVerify } from "jose";
-import { jwtAudience, jwtIssuer } from "../../domain/Auth/jwtConfig";
-import { AuthenticationFailedError } from "../../domain/Auth/LoginUseCase";
+import { jwtAudience, jwtIssuer } from "../domain/Auth/jwtConfig";
+import { AuthenticationFailedError } from "../domain/Auth/LoginUseCase";
 
 export function createAuthenticateMiddleware(
 	signingKey: Uint8Array,
