@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String         @map("password_hash")
+  phone         String?
+  isAdmin       Boolean        @default(false) @map("is_admin")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
+  matchEntries  MatchPlayer[]
+
+  @@map("players")
+}
+
+model Match {
+  id        String       @id @default(cuid())
+  dateTime  DateTime     @map("date_time")
+  status    String       @default("OPEN")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  players   MatchPlayer[]
+
+  @@map("matches")
+}
+
+model MatchPlayer {
+  id            String    @id @default(cuid())
+  matchId       String    @map("match_id")
+  playerId      String    @map("player_id")
+  slot          Int
+  confirmation  String?   @default("PENDING")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  match         Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player        Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@unique([matchId, slot])
+  @@map("match_players")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @map("token_hash")
+  playerId  String   @map("player_id")
+  familyId  String   @map("family_id")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}

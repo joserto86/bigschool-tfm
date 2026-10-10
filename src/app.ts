@@ -1,19 +1,25 @@
 import express, { Request, Response, Application } from "express";
 import { resolveSigningKey } from "./domain/Auth/signingKey";
-import { InMemoryAuthRepository } from "./persistence/Auth/InMemoryAuthRepository";
-import { InMemoryMatchRepository } from "./persistence/Match/InMemoryMatchRepository";
-import { createAuthRouter } from "./transport/authRoutes";
-import { createMatchesRouter } from "./transport/matchesRoutes";
-import { createAuthenticateMiddleware } from "./transport/middleware/authenticate";
+import { InMemoryAuthRepository } from "./infrastructure/persistence/Auth/InMemoryAuthRepository";
+import { PrismaAuthRepository } from "./infrastructure/persistence/Auth/PrismaAuthRepository";
+import { InMemoryMatchRepository } from "./infrastructure/persistence/Match/InMemoryMatchRepository";
+import { PrismaMatchRepository } from "./infrastructure/persistence/Match/PrismaMatchRepository";
+import { prisma } from "./infrastructure/database/prisma";
+import { createAuthRouter } from "./infrastructure/transport/routes/authRoutes";
+import { createMatchesRouter } from "./infrastructure/transport/routes/matchesRoutes";
+import { createAuthenticateMiddleware } from "./middleware/authenticate";
 
-export function createApp(): Application {
+export function createApp(useDatabase: boolean = false): Application {
 	const app = express();
 
 	app.use(express.json());
 
-	// Create repository instance based on configuration
-	const authRepository = new InMemoryAuthRepository();
-	const matchRepository = new InMemoryMatchRepository();
+	const authRepository = useDatabase
+		? new PrismaAuthRepository(prisma)
+		: new InMemoryAuthRepository();
+	const matchRepository = useDatabase
+		? new PrismaMatchRepository(prisma)
+		: new InMemoryMatchRepository();
 
 	const signingKey = resolveSigningKey();
 	const authenticate = createAuthenticateMiddleware(signingKey);

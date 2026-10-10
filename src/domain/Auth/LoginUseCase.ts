@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
-import { IAuthRepository } from "../../persistence/Auth/IAuthRepository";
+import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
 import { verifyPasswordOrDummy } from "./Password";
 import { jwtAudience, jwtIssuer } from "./jwtConfig";
 
@@ -70,7 +70,7 @@ export class LoginUseCase {
 			);
 		}
 
-		const user = this.authRepository.findUserByEmail(input.email);
+		const user = await this.authRepository.findUserByEmail(input.email);
 		const passwordMatches = await verifyPasswordOrDummy(
 			input.password,
 			user?.passwordHash,
@@ -95,7 +95,7 @@ export class LoginUseCase {
 			Date.now() + REFRESH_TOKEN_EXPIRES_IN_SECONDS * 1000,
 		);
 		const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
-		this.authRepository.saveRefreshToken({
+		await this.authRepository.saveRefreshToken({
 			tokenHash,
 			playerId: user.id,
 			familyId,

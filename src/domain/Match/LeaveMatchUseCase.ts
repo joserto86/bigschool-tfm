@@ -1,4 +1,4 @@
-import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { MatchNotFoundError } from "./GetMatchByIdUseCase";
 
 export interface LeaveMatchInput {
@@ -23,9 +23,9 @@ export class MatchNotOpenError extends Error {
 export class LeaveMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
-	execute(input: LeaveMatchInput): void {
+	async execute(input: LeaveMatchInput): Promise<void> {
 		const { matchId, playerId } = input;
-		const match = this.matchRepository.findById(matchId);
+		const match = await this.matchRepository.findById(matchId);
 
 		if (!match) {
 			throw new MatchNotFoundError(matchId);
@@ -46,7 +46,7 @@ export class LeaveMatchUseCase {
 		match.players.splice(playerIndex, 1);
 
 		if (match.players.length === 0) {
-			this.matchRepository.deleteById(matchId);
+			await this.matchRepository.deleteById(matchId);
 		}
 	}
 }

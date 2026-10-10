@@ -2,30 +2,30 @@ import { Request, Response } from "express";
 import {
 	CreateMatchUseCase,
 	InvalidMatchDateTimeError,
-} from "../../domain/Match/CreateMatchUseCase";
+} from "../../../domain/Match/CreateMatchUseCase";
 import {
 	GetMatchesByDateTimeUseCase,
 	MissingDateTimeQueryError,
-} from "../../domain/Match/GetMatchesByDateTimeUseCase";
+} from "../../../domain/Match/GetMatchesByDateTimeUseCase";
 import {
 	GetMatchByIdUseCase,
 	MatchNotFoundError,
-} from "../../domain/Match/GetMatchByIdUseCase";
+} from "../../../domain/Match/GetMatchByIdUseCase";
 import {
 	JoinMatchUseCase,
 	MatchFullError,
 	PlayerAlreadyRegisteredError,
-} from "../../domain/Match/JoinMatchUseCase";
+} from "../../../domain/Match/JoinMatchUseCase";
 import {
 	LeaveMatchUseCase,
 	MatchNotOpenError,
 	PlayerNotInMatchError,
-} from "../../domain/Match/LeaveMatchUseCase";
+} from "../../../domain/Match/LeaveMatchUseCase";
 import {
 	ConfirmMatchUseCase,
 	MatchNotCompletedError,
 	PlayerNotInMatchError as PlayerNotInConfirmationError,
-} from "../../domain/Match/ConfirmMatchUseCase";
+} from "../../../domain/Match/ConfirmMatchUseCase";
 
 export class MatchesController {
 	constructor(
@@ -37,9 +37,9 @@ export class MatchesController {
 		private readonly confirmMatchUseCase: ConfirmMatchUseCase,
 	) {}
 
-	createMatch = (req: Request, res: Response): void => {
+	createMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const match = this.createMatchUseCase.execute({
+			const match = await this.createMatchUseCase.execute({
 				dateTime: req.body?.dateTime,
 			});
 			res.status(201).json(match);
@@ -55,9 +55,9 @@ export class MatchesController {
 		}
 	};
 
-	getMatches = (req: Request, res: Response): void => {
+	getMatches = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const items = this.getMatchesByDateTimeUseCase.execute({
+			const items = await this.getMatchesByDateTimeUseCase.execute({
 				dateTime: req.query.dateTime,
 			});
 			res.status(200).json({ items });
@@ -73,9 +73,9 @@ export class MatchesController {
 		}
 	};
 
-	getMatchById = (req: Request, res: Response): void => {
+	getMatchById = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const match = this.getMatchByIdUseCase.execute({
+			const match = await this.getMatchByIdUseCase.execute({
 				matchId: req.params.matchId as string,
 			});
 			res.status(200).json(match);
@@ -91,9 +91,9 @@ export class MatchesController {
 		}
 	};
 
-	joinMatch = (req: Request, res: Response): void => {
+	joinMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const result = this.joinMatchUseCase.execute({
+			const result = await this.joinMatchUseCase.execute({
 				matchId: req.params.matchId as string,
 				playerId: req.body?.playerId,
 			});
@@ -124,9 +124,9 @@ export class MatchesController {
 		}
 	};
 
-	leaveMatch = (req: Request, res: Response): void => {
+	leaveMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
-			this.leaveMatchUseCase.execute({
+			await this.leaveMatchUseCase.execute({
 				matchId: req.params.matchId as string,
 				playerId: req.params.playerId as string,
 			});
@@ -153,9 +153,9 @@ export class MatchesController {
 		}
 	};
 
-	confirmMatch = (req: Request, res: Response): void => {
+	confirmMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const result = this.confirmMatchUseCase.execute({
+			const result = await this.confirmMatchUseCase.execute({
 				matchId: req.params.matchId as string,
 				playerId: req.body?.playerId,
 				decision: req.body?.decision,
