@@ -1,4 +1,4 @@
-import express, { Application } from "express";
+import express, { Request, Response, Application } from "express";
 import { resolveSigningKey } from "./domain/Auth/signingKey";
 import { InMemoryAuthRepository } from "./persistence/Auth/InMemoryAuthRepository";
 import { InMemoryMatchRepository } from "./persistence/Match/InMemoryMatchRepository";
@@ -7,16 +7,20 @@ import { createMatchesRouter } from "./transport/matchesRoutes";
 import { createAuthenticateMiddleware } from "./transport/middleware/authenticate";
 
 export function createApp(): Application {
-  const app = express();
+	const app = express();
 
 	app.use(express.json());
 
 	// Create repository instance based on configuration
-  const authRepository = new InMemoryAuthRepository();
-  const matchRepository = new InMemoryMatchRepository();
+	const authRepository = new InMemoryAuthRepository();
+	const matchRepository = new InMemoryMatchRepository();
 
 	const signingKey = resolveSigningKey();
 	const authenticate = createAuthenticateMiddleware(signingKey);
+
+	app.get("/", (_req: Request, res: Response) => {
+		res.send("Hello World");
+	});
 
 	app.use("/auth", createAuthRouter(authRepository, signingKey, authenticate));
 	app.use("/matches", authenticate, createMatchesRouter(matchRepository));
