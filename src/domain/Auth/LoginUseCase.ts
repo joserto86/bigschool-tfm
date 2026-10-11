@@ -5,12 +5,12 @@ import { verifyPasswordOrDummy } from "./Password";
 import { jwtAudience, jwtIssuer } from "./jwtConfig";
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN
-	? parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
+	? Number.parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
 	: 900;
 
 const REFRESH_TOKEN_EXPIRES_IN_SECONDS = process.env
 	.REFRESH_TOKEN_EXPIRES_IN_SECONDS
-	? parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS, 10)
+	? Number.parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS, 10)
 	: 30 * 24 * 60 * 60;
 
 function isValidEmail(email: string): boolean {

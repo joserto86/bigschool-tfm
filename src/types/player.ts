@@ -5,4 +5,7 @@ export interface Player {
 	passwordHash: string;
 	phone?: string;
 	isAdmin: boolean;
+	active: boolean;
+	createdAt: Date;
+	updatedAt?: Date;
 }

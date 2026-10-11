@@ -11,6 +11,8 @@ const DEVELOPMENT_TEST_USER: Player | undefined =
 				email: "player@example.com",
 				passwordHash: hashPasswordSync("correct-password"),
 				isAdmin: false,
+				active: true,
+				createdAt: new Date(),
 			};
 
 export class InMemoryAuthRepository implements IAuthRepository {

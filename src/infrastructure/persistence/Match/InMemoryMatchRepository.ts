@@ -2,10 +2,15 @@ import { Match } from "../../../types/match";
 import { IMatchRepository } from "./IMatchRepository";
 
 export class InMemoryMatchRepository implements IMatchRepository {
-	private readonly matches: Match[] = [];
+	private matches: Match[] = [];
 
 	async create(match: Match): Promise<Match> {
 		this.matches.push(match);
+		return match;
+	}
+
+	async update(match: Match): Promise<Match> { 
+		this.matches = this.matches.map((m) => (m.id === match.id ? match : m));
 		return match;
 	}
 

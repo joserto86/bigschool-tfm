@@ -18,6 +18,8 @@ export class PrismaMatchRepository implements IMatchRepository {
 						confirmation: player.confirmation ?? "PENDING",
 					})),
 				},
+				createdAt: match.createdAt,
+				updatedAt: match.updatedAt ?? new Date(),
 			},
 			include: { players: true },
 		});
@@ -32,6 +34,42 @@ export class PrismaMatchRepository implements IMatchRepository {
 				confirmation: (player.confirmation ??
 					"PENDING") as Match["players"][number]["confirmation"],
 			})),
+			createdAt: created.createdAt,
+			updatedAt: created.updatedAt ?? undefined,
+		};
+	}
+
+	async update(match: Match): Promise<Match> {
+		const updated = await this.prisma.match.update({
+			where: { id: match.id },
+			data: {
+				dateTime: new Date(match.dateTime),
+				status: match.status,
+				players: {
+					deleteMany: {},
+					create: match.players.map((player: MatchPlayer) => ({
+						playerId: player.playerId,
+						slot: player.slot,
+						confirmation: player.confirmation ?? "PENDING",
+					})),
+				},
+				updatedAt: match.updatedAt ?? new Date(),
+			},
+			include: { players: true },
+		});
+
+		return {
+			id: updated.id,
+			dateTime: updated.dateTime.toISOString(),
+			status: updated.status as Match["status"],
+			players: updated.players.map((player: MatchPlayer) => ({
+				playerId: player.playerId,
+				slot: player.slot,
+				confirmation: (player.confirmation ??
+					"PENDING") as Match["players"][number]["confirmation"],
+			})),
+			createdAt: updated.createdAt,
+			updatedAt: updated.updatedAt ?? undefined,
 		};
 	}
 
@@ -41,7 +79,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			include: { players: true },
 		});
 
-		return matches.map((match:Match) => this.toDomain(match));
+		return matches.map((match: Match) => this.toDomain(match));
 	}
 
 	async findById(matchId: string): Promise<Match | undefined> {
@@ -64,6 +102,8 @@ export class PrismaMatchRepository implements IMatchRepository {
 		id: string;
 		dateTime: Date;
 		status: string;
+		createdAt: Date;
+		updatedAt?: Date | null;
 		players: Array<{
 			playerId: string;
 			slot: number;
@@ -80,6 +120,8 @@ export class PrismaMatchRepository implements IMatchRepository {
 				confirmation: (player.confirmation ??
 					"PENDING") as Match["players"][number]["confirmation"],
 			})),
+			createdAt: match.createdAt,
+			updatedAt: match.updatedAt ?? undefined,
 		};
 	}
 }
