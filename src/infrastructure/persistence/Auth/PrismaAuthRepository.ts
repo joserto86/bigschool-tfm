@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { IAuthRepository, IRefreshTokenRecord } from "./IAuthRepository";
 import { Player } from "../../../types/player";
 
@@ -19,12 +19,15 @@ export class PrismaAuthRepository implements IAuthRepository {
 			passwordHash: user.passwordHash,
 			phone: user.phone ?? undefined,
 			isAdmin: user.isAdmin,
+			active: user.active,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt ?? undefined,
 		};
 	}
 
 	async findUserById(playerId: string): Promise<Player | undefined> {
 		const user = await this.prisma.player.findUnique({
-			where: { id: playerId },
+			where: { id: playerId, active: true },
 		});
 
 		if (!user) return undefined;
@@ -36,6 +39,9 @@ export class PrismaAuthRepository implements IAuthRepository {
 			passwordHash: user.passwordHash,
 			phone: user.phone ?? undefined,
 			isAdmin: user.isAdmin,
+			active: user.active,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt ?? undefined,
 		};
 	}
 

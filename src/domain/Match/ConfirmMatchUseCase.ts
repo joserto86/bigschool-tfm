@@ -57,11 +57,13 @@ export class ConfirmMatchUseCase {
 			match.status = "CONFIRMED";
 		}
 
+		const result = await this.matchRepository.update(match);
+
 		return {
-			matchId: match.id,
+			matchId: result.id,
 			playerId,
 			decision,
-			matchStatus: match.status,
+			matchStatus: result.status,
 		};
 	}
 }

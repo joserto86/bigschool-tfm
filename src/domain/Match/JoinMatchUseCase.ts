@@ -29,9 +29,11 @@ export class MatchFullError extends Error {
 }
 
 export class JoinMatchUseCase {
-	constructor(private readonly matchRepository: IMatchRepository) {}
-
+	constructor(private readonly matchRepository: IMatchRepository) { }
+		
 	async execute(input: JoinMatchInput): Promise<JoinMatchResult> {
+		const FULL_MATCH_PLAYER_COUNT = 4;
+		
 		const { matchId, playerId } = input;
 		const match = await this.matchRepository.findById(matchId);
 
@@ -43,22 +45,25 @@ export class JoinMatchUseCase {
 			throw new PlayerAlreadyRegisteredError(playerId, matchId);
 		}
 
-		if (match.players.length >= 4) {
+		if (match.players.length >= FULL_MATCH_PLAYER_COUNT) {
 			throw new MatchFullError(matchId);
 		}
 
 		const slot = match.players.length + 1;
 		match.players.push({ playerId, slot, confirmation: null });
+		match.updatedAt = new Date();
 
-		if (match.players.length === 4) {
+		if (match.players.length === FULL_MATCH_PLAYER_COUNT) {
 			match.status = "COMPLETED";
 		}
 
+		const result = await this.matchRepository.update(match);
+
 		return {
-			matchId: match.id,
+			matchId: result.id,
 			playerId,
 			slot,
-			matchStatus: match.status,
+			matchStatus: result.status,
 			confirmation: null,
 		};
 	}

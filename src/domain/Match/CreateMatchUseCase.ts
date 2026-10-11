@@ -28,6 +28,7 @@ export class CreateMatchUseCase {
 			dateTime,
 			status: "OPEN",
 			players: [],
+			createdAt: new Date(),
 		};
 
 		return this.matchRepository.create(match);
