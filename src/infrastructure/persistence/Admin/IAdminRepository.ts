@@ -1,3 +1,5 @@
+import { Player } from "@prisma/client";
+
 export interface AdminRecord {
 	email: string;
 	name: string;
@@ -7,6 +9,7 @@ export interface AdminRecord {
 }
 
 export interface IAdminRepository {
-	findByEmail(email: string): Promise<boolean>;
+	findByEmail(email: string): Promise<Player | null>;
 	createAdmin(admin: AdminRecord): Promise<boolean>;
+	findById(id: string): Promise<Player | null>;
 }

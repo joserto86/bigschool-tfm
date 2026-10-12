@@ -2,8 +2,8 @@ import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepo
 import { hashPassword, verifyPassword } from "./Password";
 import { AuthenticationFailedError } from "./LoginUseCase";
 
-const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 128;
+const MIN_PASSWORD_LENGTH = Number.parseInt(process.env.MIN_PASSWORD_LENGTH ?? "8", 10);
+const MAX_PASSWORD_LENGTH = Number.parseInt(process.env.MAX_PASSWORD_LENGTH ?? "128", 10);
 
 export class InvalidPasswordRequestError extends Error {
 	constructor(message: string) {

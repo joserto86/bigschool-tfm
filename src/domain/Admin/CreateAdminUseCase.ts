@@ -2,9 +2,12 @@ import { z } from "zod";
 import { IAdminRepository } from "../../infrastructure/persistence/Admin/IAdminRepository";
 import { hashPassword } from "../Auth/Password";
 
+const MIN_PASSWORD_LENGTH = Number.parseInt(process.env.MIN_PASSWORD_LENGTH ?? "8", 10);
+const MAX_PASSWORD_LENGTH = Number.parseInt(process.env.MAX_PASSWORD_LENGTH ?? "128", 10);
+
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email());
 const nameSchema = z.string().trim().min(1);
-const passwordSchema = z.string().min(8).max(128);
+const passwordSchema = z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH);
 
 export interface CreateAdminInput {
 	email: string;
@@ -43,7 +46,7 @@ export class CreateAdminUseCase {
 		const password = passwordSchema.safeParse(input.password);
 		if (!password.success) {
 			throw new InvalidAdminRequestError(
-				"Password must be between 8 and 128 characters.",
+				`Password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`,
 			);
 		}
 

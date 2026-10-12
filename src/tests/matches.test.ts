@@ -47,18 +47,30 @@ describe("Matches API", () => {
 		});
 
 		it("creates a match in OPEN status with no players", async () => {
+			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
+			
 			const response = await request(app)
 				.post("/matches")
 				.set("Authorization", authorization)
-				.send({ dateTime: "2026-10-10T18:00:00+02:00" });
+				.send({ dateTime });
 
 			expect(response.status).toBe(201);
 			expect(response.body).toMatchObject({
-				dateTime: "2026-10-10T18:00:00+02:00",
+				dateTime: dateTime,
 				status: "OPEN",
 				players: [],
 			});
 			expect(response.body.id).toBeTruthy();
+		});
+
+		it("rejects a request with a past dateTime", async () => {
+			const response = await request(app)
+				.post("/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: new Date(Date.now() - 3600 * 1000).toISOString() });
+
+			expect(response.status).toBe(400);
+			expect(response.body.code).toBe("INVALID_REQUEST");
 		});
 
 		it("allows creating multiple matches with the same dateTime", async () => {

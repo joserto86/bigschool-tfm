@@ -9,10 +9,12 @@ const DEVELOPMENT_TEST_USER: Player | undefined =
 				id: "test-player",
 				name: "Test Player",
 				email: "player@example.com",
+				phone: null,
 				passwordHash: hashPasswordSync("correct-password"),
 				isAdmin: false,
 				active: true,
 				createdAt: new Date(),
+				updatedAt: null,
 			};
 
 export class InMemoryAuthRepository implements IAuthRepository {

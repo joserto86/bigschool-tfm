@@ -3,7 +3,7 @@ import { Match } from "../../types/match";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 
 export interface CreateMatchInput {
-	dateTime: unknown;
+	dateTime: string;
 }
 
 export class InvalidMatchDateTimeError extends Error {
@@ -23,12 +23,18 @@ export class CreateMatchUseCase {
 			throw new InvalidMatchDateTimeError();
 		}
 
+		if (new Date(dateTime) <= new Date()) {
+			console.log("Invalid dateTime:", dateTime, "Current time:", new Date().toISOString());
+			throw new InvalidMatchDateTimeError();
+		}
+
 		const match: Match = {
 			id: randomUUID(),
 			dateTime,
 			status: "OPEN",
 			players: [],
 			createdAt: new Date(),
+			updatedAt: null,
 		};
 
 		return this.matchRepository.create(match);

@@ -1,19 +1,41 @@
+import { Player } from "../../../types/player";
 import { AdminRecord, IAdminRepository } from "./IAdminRepository";
 
 export class InMemoryAdminRepository implements IAdminRepository {
-	private readonly admins = new Map<string, AdminRecord>();
+	private readonly players = new Map<string, Player>();
 
 	async findByEmail(email: string): Promise<boolean> {
-		return this.admins.has(email.trim().toLowerCase());
+		return this.players.has(email.trim().toLowerCase());
 	}
 
-	async createAdmin(admin: AdminRecord): Promise<boolean> {
-		const email = admin.email.trim().toLowerCase();
-		if (this.admins.has(email)) {
+	async findById(id: string): Promise<Player | null> {
+		for (const player of this.players.values()) {
+			if (player.id === id) {
+				return player;
+			}
+		}
+		return null;
+	}
+
+	async createAdmin(player: AdminRecord): Promise<boolean> {
+		const email = player.email.trim().toLowerCase();
+		if (this.players.has(email)) {
 			return false;
 		}
 
-		this.admins.set(email, { ...admin, email });
+		const newPlayer: Player = {
+			id: crypto.randomUUID(),
+			name: player.name,
+			email: email,
+			phone: null,
+			passwordHash: player.passwordHash,
+			isAdmin: true,
+			active: true,
+			createdAt: new Date(),
+			updatedAt: null,
+		}
+
+		this.players.set(email, newPlayer);
 		return true;
 	}
 }
