@@ -12,6 +12,7 @@ export function createAuthenticateMiddleware(
 			const separator = authorization.indexOf(" ");
 			const scheme = separator > 0 ? authorization.slice(0, separator) : "";
 			const token = separator > 0 ? authorization.slice(separator).trim() : "";
+			
 			if (scheme.toLowerCase() !== "bearer" || !token) {
 				throw new AuthenticationFailedError();
 			}

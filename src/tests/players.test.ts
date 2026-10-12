@@ -31,7 +31,7 @@ describe("Players API", () => {
 		vi.unstubAllEnvs();
 	});
 
-	async function createMatch(dateTime = "2026-10-10T18:00:00+02:00") {
+	async function createMatch(dateTime = new Date(Date.now() + 3600 * 1000).toISOString()) {
 		const response = await request(app)
 			.post("/matches")
 			.set("Authorization", authorization).send({ dateTime });

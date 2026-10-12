@@ -3,9 +3,9 @@ export interface Player {
 	name: string;
 	email: string;
 	passwordHash: string;
-	phone?: string;
+	phone: string | null;
 	isAdmin: boolean;
 	active: boolean;
 	createdAt: Date;
-	updatedAt?: Date;
+	updatedAt: Date | null;
 }

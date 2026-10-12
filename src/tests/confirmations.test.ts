@@ -35,7 +35,7 @@ describe("Confirmations API", () => {
 		const created = await request(app)
 			.post("/matches")
 			.set("Authorization", authorization)
-			.send({ dateTime: "2026-10-10T18:00:00+02:00" });
+			.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 		const matchId = created.body.id as string;
 
 		for (const playerId of ["player-1", "player-2", "player-3", "player-4"]) {

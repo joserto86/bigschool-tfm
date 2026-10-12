@@ -14,5 +14,5 @@ export interface Match {
 	status: MatchStatus;
 	players: MatchPlayer[];
 	createdAt: Date;
-	updatedAt?: Date;
+	updatedAt: Date | null;
 }

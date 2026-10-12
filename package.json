@@ -10,6 +10,7 @@
     "test": "vitest run",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "admin:create": "tsx scripts/create-admin.ts",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:generate": "prisma generate --schema=./src/infrastructure/database/prisma/schema.prisma",
@@ -29,6 +30,7 @@
     "vitest": "^5.0.1"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.7.3",
     "@prisma/client": "^6.3.1",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",

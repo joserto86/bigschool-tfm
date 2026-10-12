@@ -1,7 +1,7 @@
 import { randomBytes, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 
-const PASSWORD_KEY_LENGTH = 64;
-const PASSWORD_SALT_LENGTH = 16;
+const PASSWORD_KEY_LENGTH = Number.parseInt(process.env.PASSWORD_KEY_LENGTH ?? "64", 10);
+const PASSWORD_SALT_LENGTH = Number.parseInt(process.env.PASSWORD_SALT_LENGTH ?? "16", 10);
 const DUMMY_PASSWORD_HASH = `scrypt$${Buffer.alloc(PASSWORD_SALT_LENGTH).toString("base64url")}$${Buffer.alloc(PASSWORD_KEY_LENGTH).toString("base64url")}`;
 
 function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
