@@ -11,5 +11,5 @@ export interface AdminRecord {
 export interface IAdminRepository {
 	findByEmail(email: string): Promise<Player | null>;
 	createAdmin(admin: AdminRecord): Promise<boolean>;
-	findById(id: string): Promise<Player | null>;
+	findById(id: string): Promise<Player| null>;
 }

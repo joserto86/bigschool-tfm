@@ -9,7 +9,7 @@ const DEVELOPMENT_TEST_USER: Player | undefined =
 				id: "test-player",
 				name: "Test Player",
 				email: "player@example.com",
-				phone: null,
+				phone: "+34600111222",
 				passwordHash: hashPasswordSync("correct-password"),
 				isAdmin: false,
 				active: true,
@@ -44,6 +44,35 @@ export class InMemoryAuthRepository implements IAuthRepository {
 	async findUserById(playerId: string): Promise<Player | undefined> {
 		return this.users.find((user) => user.id === playerId);
 	}
+
+	// async updateOwnPlayerProfile(
+	// 	playerId: string,
+	// 	update: { name?: string; email?: string; phone?: string },
+	// ) {
+	// 	const player = this.users.find((user) => user.id === playerId);
+	// 	if (!player?.active) {
+	// 		return { status: "not-found" } as const;
+	// 	}
+
+	// 	const normalizedEmail = update.email?.trim().toLowerCase();
+	// 	if (
+	// 		normalizedEmail &&
+	// 		this.users.some(
+	// 			(user) =>
+	// 				user.id !== playerId &&
+	// 				user.email.trim().toLowerCase() === normalizedEmail,
+	// 		)
+	// 	) {
+	// 		return { status: "email-conflict" } as const;
+	// 	}
+
+	// 	if (update.name !== undefined) player.name = update.name.trim();
+	// 	if (normalizedEmail !== undefined) player.email = normalizedEmail;
+	// 	if (update.phone !== undefined) player.phone = update.phone.trim();
+	// 	player.updatedAt = new Date();
+
+	// 	return { status: "updated", player: { ...player } } as const;
+	// }
 
 	async updatePasswordHash(
 		playerId: string,

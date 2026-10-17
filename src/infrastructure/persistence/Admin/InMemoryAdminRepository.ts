@@ -4,8 +4,12 @@ import { AdminRecord, IAdminRepository } from "./IAdminRepository";
 export class InMemoryAdminRepository implements IAdminRepository {
 	private readonly players = new Map<string, Player>();
 
-	async findByEmail(email: string): Promise<boolean> {
-		return this.players.has(email.trim().toLowerCase());
+	private constructor() {
+		this.createInitialPlayers()
+	}
+
+	async findByEmail(email: string): Promise<Player | null> {
+		return this.players.get(email.trim().toLowerCase()) || null;
 	}
 
 	async findById(id: string): Promise<Player | null> {
@@ -24,7 +28,7 @@ export class InMemoryAdminRepository implements IAdminRepository {
 		}
 
 		const newPlayer: Player = {
-			id: crypto.randomUUID(),
+			id: this.generatePlayerId(this.players.size + 1),
 			name: player.name,
 			email: email,
 			phone: null,
@@ -37,5 +41,30 @@ export class InMemoryAdminRepository implements IAdminRepository {
 
 		this.players.set(email, newPlayer);
 		return true;
+	}
+
+	private createInitialPlayers() {
+		for (let index = 1; index <= 3; index++) {
+			const id = this.generatePlayerId(index);
+			const email = `player-${index}@example.com`;
+
+			const player: Player = {
+				id,
+				name: `Test Player ${index}`,
+				email,
+				phone: null,
+				passwordHash: crypto.randomUUID(),
+				isAdmin: false,
+				active: true,
+				createdAt: new Date(),
+				updatedAt: null,
+			};
+
+			this.players.set(email, player);
+		}
+	}
+
+	private generatePlayerId(index: number): string {
+		return `player-${index}`;
 	}
 }
