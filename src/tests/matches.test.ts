@@ -35,11 +35,11 @@ describe("Matches API", () => {
 		it("rejects a request without a valid access token", async () => {
 			const missing = await request(app)
 				.post("/matches")
-				.send({ dateTime: "2026-10-10T18:00:00+02:00" });
+				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 			const invalid = await request(app)
 				.post("/matches")
 				.set("Authorization", "Bearer invalid-token")
-				.send({ dateTime: "2026-10-10T18:00:00+02:00" });
+				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
 			expect(missing.status).toBe(401);
 			expect(invalid.status).toBe(401);
@@ -74,7 +74,7 @@ describe("Matches API", () => {
 		});
 
 		it("allows creating multiple matches with the same dateTime", async () => {
-			const payload = { dateTime: "2026-11-01T10:00:00+01:00" };
+			const payload = { dateTime: new Date(Date.now() + 3600 * 1000).toISOString() };
 
 			const first = await request(app).post("/matches")
 				.set("Authorization", authorization).send(payload);
@@ -98,7 +98,7 @@ describe("Matches API", () => {
 
 	describe("GET /matches", () => {
 		it("returns matches filtered by dateTime", async () => {
-			const dateTime = "2026-12-01T09:00:00+01:00";
+			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
 			await request(app).post("/matches")
 				.set("Authorization", authorization).send({ dateTime });
 
@@ -137,7 +137,7 @@ describe("Matches API", () => {
 			const created = await request(app)
 				.post("/matches")
 				.set("Authorization", authorization)
-				.send({ dateTime: "2026-10-15T20:00:00+02:00" });
+				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
 			const response = await request(app).get(`/matches/${created.body.id}`)
 				.set("Authorization", authorization);
