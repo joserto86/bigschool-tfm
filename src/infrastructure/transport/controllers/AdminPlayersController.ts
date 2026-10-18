@@ -18,9 +18,6 @@ export class AdminPlayersController {
 			const player = await this.useCases.createPlayer(req.body);
 			res.status(201).json(player);
 		} catch (error) {
-
-			// console.log("Error in createPlayer:", error); // Log the error for debugging
-
 			if (this.respondToDomainError(error, res)) return;
 			throw error;
 		}

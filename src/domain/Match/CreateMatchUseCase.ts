@@ -4,6 +4,7 @@ import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchR
 
 export interface CreateMatchInput {
 	dateTime: string;
+	playerId: string;
 }
 
 export class InvalidMatchDateTimeError extends Error {
@@ -17,7 +18,7 @@ export class CreateMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	async execute(input: CreateMatchInput): Promise<Match> {
-		const { dateTime } = input;
+		const { dateTime, playerId } = input;
 
 		if (typeof dateTime !== "string" || dateTime.trim() === "") {
 			throw new InvalidMatchDateTimeError();
@@ -32,7 +33,13 @@ export class CreateMatchUseCase {
 			id: randomUUID(),
 			dateTime,
 			status: "OPEN",
-			players: [],
+			players: [
+				{
+					playerId,
+					slot: 1,
+					confirmation: null,
+				},
+			],
 			createdAt: new Date(),
 			updatedAt: null,
 		};

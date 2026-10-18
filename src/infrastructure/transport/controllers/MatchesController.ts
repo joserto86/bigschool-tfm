@@ -41,6 +41,7 @@ export class MatchesController {
 		try {
 			const match = await this.createMatchUseCase.execute({
 				dateTime: req.body?.dateTime,
+				playerId: req.auth?.playerId as string,
 			});
 			res.status(201).json(match);
 		} catch (error) {
@@ -95,7 +96,7 @@ export class MatchesController {
 		try {
 			const result = await this.joinMatchUseCase.execute({
 				matchId: req.params.matchId as string,
-				playerId: req.body?.playerId,
+				playerId: req.auth?.playerId as string,
 			});
 			res.status(201).json(result);
 		} catch (error) {
@@ -128,7 +129,7 @@ export class MatchesController {
 		try {
 			await this.leaveMatchUseCase.execute({
 				matchId: req.params.matchId as string,
-				playerId: req.params.playerId as string,
+				playerId: req.auth?.playerId as string,
 			});
 			res.status(204).send();
 		} catch (error) {
@@ -157,7 +158,7 @@ export class MatchesController {
 		try {
 			const result = await this.confirmMatchUseCase.execute({
 				matchId: req.params.matchId as string,
-				playerId: req.body?.playerId,
+				playerId: req.auth?.playerId as string,
 				decision: req.body?.decision,
 			});
 			res.status(200).json(result);

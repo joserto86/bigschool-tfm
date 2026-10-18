@@ -6,10 +6,10 @@ import { createApp } from "../app";
 
 const JWT_SECRET = "confirmations-test-secret-with-at-least-32-bytes";
 
-async function createAccessToken(): Promise<string> {
+async function createAccessToken(playerId: string): Promise<string> {
 	return new SignJWT({})
 		.setProtectedHeader({ alg: "HS256" })
-		.setSubject("test-player")
+		.setSubject(playerId)
 		.setIssuer("satispadel-api")
 		.setAudience("satispadel-client")
 		.setIssuedAt()
@@ -17,14 +17,18 @@ async function createAccessToken(): Promise<string> {
 		.sign(Buffer.from(JWT_SECRET, "utf8"));
 }
 
-describe("Confirmations API", () => {
+async function createAuthorization(playerId: string): Promise<string> {
+	return `Bearer ${await createAccessToken(playerId)}`;
+}
+
+describe("Players API", () => {
 	let app: Application;
 	let authorization: string;
 
 	beforeEach(async () => {
 		vi.stubEnv("JWT_SECRET", JWT_SECRET);
 		app = createApp();
-		authorization = `Bearer ${await createAccessToken()}`;
+		authorization = await createAuthorization("player-1");
 	});
 
 	afterEach(() => {
@@ -38,11 +42,10 @@ describe("Confirmations API", () => {
 			.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 		const matchId = created.body.id as string;
 
-		for (const playerId of ["player-1", "player-2", "player-3", "player-4"]) {
+		for (const playerId of ["player-2", "player-3", "player-4"]) {
 			await request(app)
 				.post(`/matches/${matchId}/players`)
-				.set("Authorization", authorization)
-				.send({ playerId });
+				.set("Authorization", await createAuthorization(playerId));
 		}
 
 		return matchId;
@@ -52,11 +55,11 @@ describe("Confirmations API", () => {
 		it("rejects a request without a valid access token", async () => {
 			const missing = await request(app)
 				.post("/matches/any-match/confirmation")
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.send({ decision: "CONFIRMED" });
 			const invalid = await request(app)
 				.post("/matches/any-match/confirmation")
 				.set("Authorization", "Bearer invalid-token")
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.send({ decision: "CONFIRMED" });
 
 			expect(missing.status).toBe(401);
 			expect(invalid.status).toBe(401);
@@ -69,7 +72,7 @@ describe("Confirmations API", () => {
 			const response = await request(app)
 				.post(`/matches/${matchId}/confirmation`)
 				.set("Authorization", authorization)
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.send({ decision: "CONFIRMED" });
 
 			expect(response.status).toBe(200);
 			expect(response.body).toMatchObject({
@@ -87,8 +90,8 @@ describe("Confirmations API", () => {
 			for (const playerId of ["player-1", "player-2", "player-3", "player-4"]) {
 				response = await request(app)
 					.post(`/matches/${matchId}/confirmation`)
-					.set("Authorization", authorization)
-					.send({ playerId, decision: "CONFIRMED" });
+					.set("Authorization", await createAuthorization(playerId))
+					.send({ decision: "CONFIRMED" });
 			}
 
 			expect(response?.status).toBe(200);
@@ -99,13 +102,13 @@ describe("Confirmations API", () => {
 			const matchId = await createCompletedMatch();
 			await request(app)
 				.post(`/matches/${matchId}/confirmation`)
-				.set("Authorization", authorization)
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.set("Authorization", await createAuthorization("player-1"))
+				.send({ decision: "CONFIRMED" });
 
 			const response = await request(app)
 				.post(`/matches/${matchId}/confirmation`)
-				.set("Authorization", authorization)
-				.send({ playerId: "player-2", decision: "DECLINED" });
+				.set("Authorization", await createAuthorization("player-2"))
+				.send({ decision: "DECLINED" });
 
 			expect(response.status).toBe(200);
 			expect(response.body.matchStatus).toBe("CANCELLED");
@@ -120,7 +123,7 @@ describe("Confirmations API", () => {
 			const response = await request(app)
 				.post(`/matches/${created.body.id}/confirmation`)
 				.set("Authorization", authorization)
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.send({ decision: "CONFIRMED" });
 
 			expect(response.status).toBe(409);
 		});
@@ -130,8 +133,8 @@ describe("Confirmations API", () => {
 
 			const response = await request(app)
 				.post(`/matches/${matchId}/confirmation`)
-				.set("Authorization", authorization)
-				.send({ playerId: "player-99", decision: "CONFIRMED" });
+				.set("Authorization", await createAuthorization("player-99"))
+				.send({ decision: "CONFIRMED" });
 
 			expect(response.status).toBe(409);
 		});
@@ -140,7 +143,7 @@ describe("Confirmations API", () => {
 			const response = await request(app)
 				.post("/matches/does-not-exist/confirmation")
 				.set("Authorization", authorization)
-				.send({ playerId: "player-1", decision: "CONFIRMED" });
+				.send({ decision: "CONFIRMED" });
 
 			expect(response.status).toBe(404);
 		});

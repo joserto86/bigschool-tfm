@@ -33,7 +33,7 @@ export function createMatchesRouter(matchRepository: IMatchRepository): Router {
 	router.get("/", matchesController.getMatches);
 	router.get("/:matchId", matchesController.getMatchById);
 	router.post("/:matchId/players", matchesController.joinMatch);
-	router.delete("/:matchId/players/:playerId", matchesController.leaveMatch);
+	router.delete("/:matchId/players", matchesController.leaveMatch);
 	router.post("/:matchId/confirmation", matchesController.confirmMatch);
 
 	return router;

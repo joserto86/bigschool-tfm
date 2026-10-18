@@ -42,9 +42,6 @@ export class GetOwnPlayerUseCase {
 
 	async execute(playerId: string): Promise<PlayerProfile> {
 		const player = await this.playerRepository.findById(playerId);
-
-		console.log('playerId: ' + playerId);
-
 		if (!player?.active) {
 			throw new AuthenticationFailedError();
 		}

@@ -29,11 +29,9 @@ tags:
   - name: Matches
     description: Operaciones sobre partidos
   - name: Players
-    description: Perfil propio, inscripción y desinscripción de jugadores
+    description: Perfil propio, inscripción, desinscripción y confirmación de partidos
   - name: Admin Players
     description: Gestión administrativa de las cuentas de jugadores
-  - name: Confirmations
-    description: Confirmación o rechazo de partidos completados
   - name: Auth
     description: Autenticación y gestión de credenciales
 
@@ -44,6 +42,9 @@ paths:
       summary: Crear un partido
       description: |
         Crea un nuevo partido en estado OPEN.
+
+        El jugador autenticado queda inscrito automáticamente en el partido,
+        en el primer hueco disponible. Su identidad se obtiene del token de acceso Bearer.
 
         Se permite crear varios partidos con la misma fecha y hora.
         La API genera el matchId.
@@ -69,11 +70,18 @@ paths:
                 id: match-123
                 dateTime: '2026-10-10T18:00:00+02:00'
                 status: OPEN
-                players: []
+                players:
+                  - playerId: player-1
+                    slot: 1
+                    confirmation: null
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      x-business-rules:
+        - Player identity must be derived from the authenticated access token.
+        - The authenticated player is automatically registered in the new match.
+        - The match starts in OPEN status with the creator in the first slot.
 
     get:
       tags: [Matches]
@@ -149,7 +157,9 @@ paths:
       tags: [Players]
       summary: Inscribir un jugador en un partido
       description: |
-        Inscribe al jugador en el siguiente hueco libre.
+        Inscribe al jugador autenticado en el siguiente hueco libre.
+
+        La identidad del jugador se obtiene del token de acceso Bearer.
 
         El slot es calculado por el servidor y no puede ser elegido por el cliente.
 
@@ -158,14 +168,6 @@ paths:
       operationId: joinMatch
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/JoinMatchRequest'
-            example:
-              playerId: player-2
       responses:
         '201':
           description: Jugador inscrito correctamente
@@ -190,19 +192,17 @@ paths:
       x-business-rules:
         - Match must exist.
         - Match status must be OPEN.
+        - Player identity must be derived from the authenticated access token.
         - Player must not already be registered in the match.
         - A free slot must exist.
         - Fourth registered player transitions the match to COMPLETED.
 
-  /matches/{matchId}/players/{playerId}:
-    parameters:
-      - $ref: '#/components/parameters/MatchId'
-      - $ref: '#/components/parameters/PlayerId'
     delete:
       tags: [Players]
       summary: Desinscribir un jugador
       description: |
-        Elimina la inscripción del jugador.
+        Elimina la inscripción del jugador autenticado, cuya identidad se obtiene
+        del token de acceso Bearer.
 
         Solo está permitido si el partido está en estado OPEN.
         Si el jugador era el único inscrito, el partido completo se elimina.
@@ -220,17 +220,19 @@ paths:
           $ref: '#/components/responses/Conflict'
       x-business-rules:
         - Match status must be OPEN.
-        - Player must belong to the match.
+        - The authenticated player must belong to the match.
         - If this is the last player, delete the match.
 
   /matches/{matchId}/confirmation:
     parameters:
       - $ref: '#/components/parameters/MatchId'
     post:
-      tags: [Confirmations]
+      tags: [Players]
       summary: Confirmar o rechazar un partido
       description: |
-        Registra la decisión de un jugador sobre un partido COMPLETED.
+        Registra la decisión del jugador autenticado sobre un partido COMPLETED.
+
+        La identidad del jugador se obtiene del token de acceso Bearer.
 
         - DECLINED: el partido pasa inmediatamente a CANCELLED.
         - CONFIRMED: si los cuatro jugadores están CONFIRMED, el partido pasa a CONFIRMED.
@@ -247,12 +249,10 @@ paths:
               confirm:
                 summary: Confirmar
                 value:
-                  playerId: player-1
                   decision: CONFIRMED
               decline:
                 summary: Rechazar
                 value:
-                  playerId: player-1
                   decision: DECLINED
       responses:
         '200':
@@ -293,7 +293,7 @@ paths:
           $ref: '#/components/responses/Conflict'
       x-business-rules:
         - Match status must be COMPLETED.
-        - Player must belong to the match.
+        - The authenticated player must belong to the match.
         - Decision must be CONFIRMED or DECLINED.
         - Any DECLINED decision transitions the match to CANCELLED.
         - Four CONFIRMED decisions transition the match to CONFIRMED.
@@ -853,14 +853,6 @@ components:
           type: string
           format: date-time
           example: '2026-10-10T18:00:00+02:00'
-    JoinMatchRequest:
-      type: object
-      required: [playerId]
-      properties:
-        playerId:
-          type: string
-          minLength: 1
-          example: player-2
     JoinMatchResult:
       type: object
       required: [matchId, playerId, slot, matchStatus]
@@ -885,12 +877,8 @@ components:
           example: null
     ConfirmationRequest:
       type: object
-      required: [playerId, decision]
+      required: [decision]
       properties:
-        playerId:
-          type: string
-          minLength: 1
-          example: player-1
         decision:
           $ref: '#/components/schemas/ConfirmationDecision'
     ConfirmationResult:

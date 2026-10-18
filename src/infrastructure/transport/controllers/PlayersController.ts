@@ -6,7 +6,6 @@ import {
 	OwnPlayerEmailConflictError,
 	UpdateOwnPlayerUseCase,
 } from "../../../domain/Player/OwnPlayerUseCases";
-import { pl } from "zod/locales";
 
 export class PlayersController {
 	constructor(
