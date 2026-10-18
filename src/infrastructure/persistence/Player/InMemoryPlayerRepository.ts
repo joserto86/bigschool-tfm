@@ -1,9 +1,15 @@
+import { randomUUID } from "node:crypto";
 import {
 	Player,
-	PlayerProfileUpdate,
-	PlayerProfileUpdateResult,
+	PlayerUpdateResult,
+	AdminPlayerCreate,
+	PlayerUpdate,
+
 } from "../../../types/player";
-import { IPlayerRepository } from "./IPlayerRepository";
+import {
+	AdminPlayerStatusUpdateResult,
+	IPlayerRepository,
+} from "./IPlayerRepository";
 import { hashPasswordSync } from "../../../domain/Auth/Password";
 
 
@@ -40,8 +46,17 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 		}
 	}
 
+	async list(): Promise<Player[]> {
+		return this.players.map((player) => ({ ...player }));
+	}
+
 	async findByEmail(email: string): Promise<Player | null> {
-		return this.players.find((player) => player.email.trim().toLowerCase() === email.trim().toLowerCase()) || null;
+		return (
+			this.players.find(
+				(player) =>
+					player.email.trim().toLowerCase() === email.trim().toLowerCase(),
+			) || null
+		);
 	}
 
 	async findById(id: string): Promise<Player | null> {
@@ -53,30 +68,102 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 		return null;
 	}
 
-	update(
+	async create(input: AdminPlayerCreate): Promise<Player | null> {
+		const email = input.email.trim().toLowerCase();
+		if (
+			this.players.some((player) => player.email.trim().toLowerCase() === email)
+		) {
+			return null;
+		}
+
+		const createdAt = new Date();
+		const player: Player = {
+			id: randomUUID(),
+			name: input.name,
+			email,
+			phone: input.phone,
+			passwordHash: input.passwordHash,
+			isAdmin: input.isAdmin,
+			active: input.active,
+			createdAt,
+			updatedAt: createdAt,
+		};
+
+		this.players.push(player);
+		return { ...player };
+	}
+
+	async update(
 		playerId: string,
-		playerUpdate: PlayerProfileUpdate,
-	): Promise<PlayerProfileUpdateResult> {
-		const currentPlayer = this.players.find((player) => player.id === playerId);
-		if (!currentPlayer) {
-			return Promise.reject(new Error(`Player not found: ${playerId}`));
+		update: PlayerUpdate,
+	): Promise<PlayerUpdateResult> {
+		const player = this.players.find((candidate) => candidate.id === playerId);
+		if (!player) {
+			return { status: "not-found" };
 		}
 
-		console.log(
-			"InMemoryPlayerRepository.updatePlayerProfile currentPlayer:",
-			currentPlayer,
-		);
-
-		const updatedPlayer: Player = { ...currentPlayer, ...playerUpdate };
-		const playerIndex = this.players.findIndex((player) => player.id === playerId);
-		if (playerIndex !== -1) {
-			this.players[playerIndex] = updatedPlayer;
+		const email = update.email?.trim().toLowerCase();
+		if (
+			email &&
+			this.players.some(
+				(candidate) =>
+					candidate.id !== playerId &&
+					candidate.email.trim().toLowerCase() === email,
+			)
+		) {
+			return { status: "email-conflict" };
 		}
 
-		return Promise.resolve({
-			status: "updated",
-			player: updatedPlayer,
+		Object.assign(player, update, email ? { email } : {}, {
+			updatedAt: new Date(),
 		});
+		return { status: "updated", player: { ...player } };
+	}
+
+	// update(
+	// 	playerId: string,
+	// 	playerUpdate: PlayerProfileUpdate,
+	// ): Promise<PlayerProfileUpdateResult> {
+	// 	const currentPlayer = this.players.find((player) => player.id === playerId);
+	// 	if (!currentPlayer) {
+	// 		return Promise.reject(new Error(`Player not found: ${playerId}`));
+	// 	}
+
+	// 	const updatedPlayer: Player = { ...currentPlayer, ...playerUpdate };
+	// 	const playerIndex = this.players.findIndex(
+	// 		(player) => player.id === playerId,
+	// 	);
+	// 	if (playerIndex !== -1) {
+	// 		this.players[playerIndex] = updatedPlayer;
+	// 	}
+
+	// 	return Promise.resolve({
+	// 		status: "updated",
+	// 		player: updatedPlayer,
+	// 	});
+	// }
+
+	async updatePlayerStatus(
+		playerId: string,
+		active: boolean,
+	): Promise<AdminPlayerStatusUpdateResult> {
+		const player = this.players.find((candidate) => candidate.id === playerId);
+		if (!player) {
+			return { status: "not-found" };
+		}
+
+		player.active = active;
+		player.updatedAt = new Date();
+		return { status: "updated", player: { ...player } };
+	}
+
+	async deletePlayer(playerId: string): Promise<"deleted" | "not-found"> {
+		const index = this.players.findIndex((player) => player.id === playerId);
+		if (index === -1) {
+			return "not-found";
+		}
+		this.players.splice(index, 1);
+		return "deleted";
 	}
 
 	private getPlayerId(player: Player): string {

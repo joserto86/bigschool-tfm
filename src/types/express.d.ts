@@ -1,7 +1,7 @@
 declare global {
 	namespace Express {
 		interface Request {
-			auth?: { playerId: string };
+			auth?: { playerId: string; isAdmin: boolean };
 		}
 	}
 }

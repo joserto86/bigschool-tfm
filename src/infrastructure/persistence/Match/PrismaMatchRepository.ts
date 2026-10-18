@@ -9,7 +9,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 		const created = await this.prisma.match.create({
 			data: {
 				id: match.id,
-				dateTime: new Date(match.dateTime),
+				dateTime: this.parseDateTime(match.dateTime),
 				status: match.status,
 				players: {
 					create: match.players.map((player: MatchPlayer) => ({
@@ -43,7 +43,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 		const updated = await this.prisma.match.update({
 			where: { id: match.id },
 			data: {
-				dateTime: new Date(match.dateTime),
+				dateTime: this.parseDateTime(match.dateTime),
 				status: match.status,
 				players: {
 					deleteMany: {},
@@ -75,7 +75,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 
 	async findByDateTime(dateTime: string): Promise<Match[]> {
 		const matches = await this.prisma.match.findMany({
-			where: { dateTime: new Date(dateTime) },
+			where: { dateTime: this.parseDateTime(dateTime) },
 			include: { players: true },
 		});
 
@@ -121,7 +121,22 @@ export class PrismaMatchRepository implements IMatchRepository {
 					"PENDING") as Match["players"][number]["confirmation"],
 			})),
 			createdAt: match.createdAt,
-			updatedAt: match.updatedAt ?? undefined,
+			updatedAt: match.updatedAt ?? null,
 		};
+	}
+
+	private parseDateTime(value: string): Date {
+		// Fix an extra zero after the day, e.g. 2026-10-190T18:30:00+02:00.
+		const normalized = value.replace(
+			/^(\d{4}-\d{2}-(?:0[1-9]|[12]\d|3[01]))0(T.*)$/,
+			"$1$2",
+		);
+		const date = new Date(normalized);
+
+		if (Number.isNaN(date.getTime())) {
+			throw new Error(`Invalid match dateTime: ${value}`);
+		}
+
+		return date;
 	}
 }

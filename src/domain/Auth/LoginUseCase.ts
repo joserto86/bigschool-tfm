@@ -78,11 +78,11 @@ export class LoginUseCase {
 			user?.passwordHash,
 		);
 
-		if (!user || !passwordMatches) {
+		if (!user?.active || !passwordMatches) {
 			throw new AuthenticationFailedError();
 		}
 
-		const accessToken = await new SignJWT({})
+		const accessToken = await new SignJWT({ isAdmin: user.isAdmin })
 			.setProtectedHeader({ alg: "HS256" })
 			.setSubject(user.id)
 			.setIssuer(jwtIssuer())

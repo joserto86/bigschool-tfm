@@ -24,7 +24,10 @@ export function createAuthenticateMiddleware(
 			if (!payload.sub) {
 				throw new AuthenticationFailedError();
 			}
-			req.auth = { playerId: payload.sub };
+			req.auth = {
+				playerId: payload.sub,
+				isAdmin: payload.isAdmin === true,
+			};
 			next();
 		} catch {
 			res.status(401).json({

@@ -1,10 +1,20 @@
 import { PrismaClient } from "@prisma/client/extension";
-import { Player, PlayerProfileUpdate, PlayerProfileUpdateResult } from "../../../types/player";
-import { IPlayerRepository } from "./IPlayerRepository";
+import { Player, PlayerUpdate, PlayerUpdateResult, AdminPlayerCreate, } from "../../../types/player";
+import {
+	AdminPlayerStatusUpdateResult,
+	IPlayerRepository,
+} from "./IPlayerRepository";
 import { Prisma } from "@prisma/client";
 
 export class PrismaPlayerRepository implements IPlayerRepository {
-	constructor(private readonly prisma: PrismaClient) {}
+	constructor(private readonly prisma: PrismaClient) { }
+	
+	async list(): Promise<Player[]> {
+		const users = await this.prisma.player.findMany({
+			orderBy: { createdAt: "asc" },
+		});
+		return users;
+	}
 
 	async findByEmail(email: string): Promise<Player | null> {
 		const user = await this.prisma.player.findUnique({
@@ -12,70 +22,62 @@ export class PrismaPlayerRepository implements IPlayerRepository {
 		});
 
 		if (!user) return null;
-
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
+		return user;
 	}
 
 	async findById(playerId: string): Promise<Player | null> {
-		const user = await this.prisma.player.findUnique({
+		const player = await this.prisma.player.findUnique({
 			where: { id: playerId, active: true },
 		});
 
-		if (!user) return null;
+		if (!player) return null;
+		return player;
+	}
 
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
+	async create(input: AdminPlayerCreate): Promise<Player | null> {
+		try {
+			const user = await this.prisma.player.create({
+				data: {
+					name: input.name,
+					email: input.email,
+					passwordHash: input.passwordHash,
+					phone: input.phone,
+					active: input.active,
+					isAdmin: false,
+				},
+			});
+			return user;
+		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === "P2002"
+			) {
+				return null;
+			}
+			throw error;
+		}
 	}
 
 	async update(
 		playerId: string,
-		player: PlayerProfileUpdate,
-	): Promise<PlayerProfileUpdateResult> {
+		update: PlayerUpdate,
+	): Promise<PlayerUpdateResult> {
 		try {
-			const user = await this.prisma.player.update({
-				where: { id: playerId, active: true },
+			const player = await this.prisma.player.update({
+				where: { id: playerId },
 				data: {
-					...(player.name !== undefined && { name: player.name.trim() }),
-					...(player.email !== undefined && {
-						email: player.email.trim().toLowerCase(),
+					...(update.name !== undefined && { name: update.name }),
+					...(update.email !== undefined && { email: update.email }),
+					...(update.phone !== undefined && { phone: update.phone }),
+					...(update.isAdmin !== undefined && {
+						isAdmin: update.isAdmin,
 					}),
-					...(player.phone !== undefined && { phone: player.phone?.trim() }),
+					...(update.active !== undefined && {
+						active: update.active,
+					}),
 				},
 			});
-
-			return {
-				status: "updated",
-				player: {
-					id: user.id,
-					name: user.name,
-					email: user.email,
-          phone: user.phone,
-          passwordHash: user.passwordHash,
-					isAdmin: user.isAdmin,
-					active: user.active,
-					createdAt: user.createdAt,
-					updatedAt: user.updatedAt,
-				},
-			};
+			return { status: "updated", player };
 		} catch (error) {
 			if (
 				error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -91,6 +93,41 @@ export class PrismaPlayerRepository implements IPlayerRepository {
 			}
 			throw error;
 		}
-  }
+	}
 
+	async updatePlayerStatus(
+		playerId: string,
+		active: boolean,
+	): Promise<AdminPlayerStatusUpdateResult> {
+		try {
+			const player = await this.prisma.player.update({
+				where: { id: playerId },
+				data: { active },
+			});
+			return { status: "updated", player };
+		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === "P2025"
+			) {
+				return { status: "not-found" };
+			}
+			throw error;
+		}
+	}
+
+	async deletePlayer(playerId: string): Promise<"deleted" | "not-found"> {
+		try {
+			await this.prisma.player.delete({ where: { id: playerId } });
+			return "deleted";
+		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === "P2025"
+			) {
+				return "not-found";
+			}
+			throw error;
+		}
+	}
 }

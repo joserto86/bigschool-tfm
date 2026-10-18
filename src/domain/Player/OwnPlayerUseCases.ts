@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Player, PlayerProfile, PlayerProfileUpdate } from "../../types/player";
+import { Player, PlayerProfile, PlayerUpdate } from "../../types/player";
 import { AuthenticationFailedError } from "../Auth/LoginUseCase";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 
@@ -58,10 +58,8 @@ export class UpdateOwnPlayerUseCase {
 
 	async execute(
 		playerId: string,
-		input: PlayerProfileUpdate,
+		input: PlayerUpdate,
 	): Promise<PlayerProfile> {
-
-		console.log('playerId' + playerId);
 
 		const parsed = updateOwnPlayerSchema.safeParse(input);
 		if (!parsed.success) {
