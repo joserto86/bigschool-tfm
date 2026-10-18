@@ -2,100 +2,10 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import {
 	IAuthRepository,
 	IRefreshTokenRecord,
-	// OwnPlayerProfileUpdate,
-	// OwnPlayerProfileUpdateResult,
 } from "./IAuthRepository";
-import { Player } from "../../../types/player";
 
 export class PrismaAuthRepository implements IAuthRepository {
 	constructor(private readonly prisma: PrismaClient) {}
-
-	async findUserByEmail(email: string): Promise<Player | undefined> {
-		const user = await this.prisma.player.findUnique({
-			where: { email: email.trim().toLowerCase() },
-		});
-
-		if (!user) return undefined;
-
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
-	}
-
-	async findUserById(playerId: string): Promise<Player | undefined> {
-		const user = await this.prisma.player.findUnique({
-			where: { id: playerId, active: true },
-		});
-
-		if (!user) return undefined;
-
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
-	}
-
-	// async updateOwnPlayerProfile(
-	// 	playerId: string,
-	// 	update: OwnPlayerProfileUpdate,
-	// ): Promise<OwnPlayerProfileUpdateResult> {
-	// 	try {
-	// 		const user = await this.prisma.player.update({
-	// 			where: { id: playerId, active: true },
-	// 			data: {
-	// 				...(update.name !== undefined && { name: update.name.trim() }),
-	// 				...(update.email !== undefined && {
-	// 					email: update.email.trim().toLowerCase(),
-	// 				}),
-	// 				...(update.phone !== undefined && { phone: update.phone.trim() }),
-	// 			},
-	// 		});
-
-	// 		return {
-	// 			status: "updated",
-	// 			player: {
-	// 				id: user.id,
-	// 				name: user.name,
-	// 				email: user.email,
-	// 				passwordHash: user.passwordHash,
-	// 				phone: user.phone,
-	// 				isAdmin: user.isAdmin,
-	// 				active: user.active,
-	// 				createdAt: user.createdAt,
-	// 				updatedAt: user.updatedAt,
-	// 			},
-	// 		};
-	// 	} catch (error) {
-	// 		if (
-	// 			error instanceof Prisma.PrismaClientKnownRequestError &&
-	// 			error.code === "P2002"
-	// 		) {
-	// 			return { status: "email-conflict" };
-	// 		}
-	// 		if (
-	// 			error instanceof Prisma.PrismaClientKnownRequestError &&
-	// 			error.code === "P2025"
-	// 		) {
-	// 			return { status: "not-found" };
-	// 		}
-	// 		throw error;
-	// 	}
-	// }
 
 	async updatePasswordHash(
 		playerId: string,

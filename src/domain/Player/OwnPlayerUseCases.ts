@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PlayerProfile, PlayerProfileUpdate } from "../../types/player";
+import { Player, PlayerProfile, PlayerProfileUpdate } from "../../types/player";
 import { AuthenticationFailedError } from "../Auth/LoginUseCase";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 
@@ -12,7 +12,7 @@ const updateOwnPlayerSchema = z
 	.strict()
 	.refine((update) => Object.keys(update).length > 0);
 
-function toPlayerProfile(player: PlayerProfile): PlayerProfile {
+function toPlayerProfile(player: Player): PlayerProfile {
 	return {
 		id: player.id,
 		name: player.name,
@@ -41,7 +41,10 @@ export class GetOwnPlayerUseCase {
 	constructor(private readonly playerRepository: IPlayerRepository) {}
 
 	async execute(playerId: string): Promise<PlayerProfile> {
-		const player = await this.playerRepository.findUserById(playerId);
+		const player = await this.playerRepository.findById(playerId);
+
+		console.log('playerId: ' + playerId);
+
 		if (!player?.active) {
 			throw new AuthenticationFailedError();
 		}
@@ -65,7 +68,7 @@ export class UpdateOwnPlayerUseCase {
 			throw new InvalidOwnPlayerUpdateError();
 		}
 		
-		const result = await this.playerRepository.updatePlayerProfile(
+		const result = await this.playerRepository.update(
 			playerId,
 			parsed.data,
 		);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IAdminRepository } from "../../infrastructure/persistence/Admin/IAdminRepository";
 import { hashPassword } from "../Auth/Password";
+import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 
 const MIN_PASSWORD_LENGTH = Number.parseInt(process.env.MIN_PASSWORD_LENGTH ?? "8", 10);
 const MAX_PASSWORD_LENGTH = Number.parseInt(process.env.MAX_PASSWORD_LENGTH ?? "128", 10);
@@ -30,7 +31,9 @@ export class AdminEmailAlreadyExistsError extends Error {
 }
 
 export class CreateAdminUseCase {
-	constructor(private readonly adminRepository: IAdminRepository) {}
+	constructor(private readonly adminRepository: IAdminRepository,
+							private readonly playerRepository: IPlayerRepository
+	) { }
 
 	async execute(input: CreateAdminInput): Promise<{ email: string }> {
 		const email = emailSchema.safeParse(input.email);
@@ -50,7 +53,7 @@ export class CreateAdminUseCase {
 			);
 		}
 
-		if (await this.adminRepository.findByEmail(email.data)) {
+		if (await this.playerRepository.findByEmail(email.data)) {
 			throw new AdminEmailAlreadyExistsError();
 		}
 

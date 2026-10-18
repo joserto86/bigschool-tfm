@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
 import { verifyPasswordOrDummy } from "./Password";
 import { jwtAudience, jwtIssuer } from "./jwtConfig";
+import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN
 	? Number.parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
@@ -52,6 +53,7 @@ export class AuthenticationFailedError extends Error {
 export class LoginUseCase {
 	constructor(
 		private readonly authRepository: IAuthRepository,
+		private readonly playerRepository: IPlayerRepository,
 		private readonly signingKey: Uint8Array,
 	) {}
 
@@ -70,7 +72,7 @@ export class LoginUseCase {
 			);
 		}
 
-		const user = await this.authRepository.findUserByEmail(input.email);
+		const user = await this.playerRepository.findByEmail(input.email);
 		const passwordMatches = await verifyPasswordOrDummy(
 			input.password,
 			user?.passwordHash,

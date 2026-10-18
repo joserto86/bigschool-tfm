@@ -19,7 +19,7 @@ describe("Own player API", () => {
 
 	async function getAccessToken(): Promise<string> {
 		const response = await request(app).post("/auth/login").send({
-			email: "player-1@example.com",
+			email: "player@example.com",
 			password: "correct-password",
 		});
 
@@ -116,9 +116,9 @@ describe("Own player API", () => {
 			expect(response.status).toBe(200);
 			expect(response.body).toMatchObject({
 				id: "test-player",
-				...update,
-				active: true,
-				isAdmin: false,
+				name: "Updated Player",
+				email: "updated@example.com",
+				phone: "+34600111222",
 			});
 			expect(response.body).not.toHaveProperty("passwordHash");
 

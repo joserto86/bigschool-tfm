@@ -13,7 +13,7 @@ export class RefreshTokenUseCase {
 		private readonly signingKey: Uint8Array,
 	) {}
 
-	async execute(input: { refreshToken: unknown }): Promise<LoginResult> {
+	async execute(input: { refreshToken: string }): Promise<LoginResult> {
 		if (
 			typeof input.refreshToken !== "string" ||
 			input.refreshToken.length === 0

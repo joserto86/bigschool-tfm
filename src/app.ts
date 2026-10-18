@@ -13,7 +13,6 @@ import { PrismaPlayerRepository } from "./infrastructure/persistence/Player/Pris
 import { InMemoryPlayerRepository } from "./infrastructure/persistence/Player/InMemoryPlayerRepository";
 import { PrismaAdminRepository } from "./infrastructure/persistence/Admin/PrismaAdminRepository";
 import { InMemoryAdminRepository } from "./infrastructure/persistence/Admin/InMemoryAdminRepository";
-import { IAdminRepository } from "./infrastructure/persistence/Admin/IAdminRepository";
 
 export function createApp(useDatabase: boolean = false): Application {
 	const app = express();
@@ -23,6 +22,11 @@ export function createApp(useDatabase: boolean = false): Application {
 	const authRepository = useDatabase
 		? new PrismaAuthRepository(prisma)
 		: new InMemoryAuthRepository();
+	
+	const playerRepository = useDatabase
+		? new PrismaPlayerRepository(prisma)
+		: new InMemoryPlayerRepository();
+	
 	const matchRepository = useDatabase
 		? new PrismaMatchRepository(prisma)
 		: new InMemoryMatchRepository();
@@ -31,9 +35,7 @@ export function createApp(useDatabase: boolean = false): Application {
 		? new PrismaAdminRepository(prisma)
 		: new InMemoryAdminRepository();
 	
-	const playerRepository = useDatabase
-		? new PrismaPlayerRepository(prisma, adminRepository)
-		: new InMemoryPlayerRepository();
+	
 	
 	const signingKey = resolveSigningKey();
 	const authenticate = createAuthenticateMiddleware(signingKey);
@@ -42,7 +44,7 @@ export function createApp(useDatabase: boolean = false): Application {
 		res.send("Hello World");
 	});
 
-	app.use("/auth", createAuthRouter(authRepository, signingKey, authenticate));
+	app.use("/auth", createAuthRouter(authRepository, playerRepository, signingKey, authenticate));
 	app.use("/players", authenticate, createPlayersRouter(playerRepository));
 	app.use("/matches", authenticate, createMatchesRouter(matchRepository));
 

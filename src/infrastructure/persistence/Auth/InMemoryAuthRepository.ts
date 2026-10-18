@@ -1,21 +1,20 @@
-import { hashPasswordSync } from "../../../domain/Auth/Password";
 import { Player } from "../../../types/player";
 import { IAuthRepository, IRefreshTokenRecord } from "./IAuthRepository";
 
-const DEVELOPMENT_TEST_USER: Player | undefined =
-	process.env.NODE_ENV === "production"
-		? undefined
-		: {
-				id: "test-player",
-				name: "Test Player",
-				email: "player@example.com",
-				phone: "+34600111222",
-				passwordHash: hashPasswordSync("correct-password"),
-				isAdmin: false,
-				active: true,
-				createdAt: new Date(),
-				updatedAt: null,
-			};
+// const DEVELOPMENT_TEST_USER: Player | undefined =
+// 	process.env.NODE_ENV === "production"
+// 		? undefined
+// 		: {
+// 				id: "test-player",
+// 				name: "Test Player",
+// 				email: "player@example.com",
+// 				phone: "+34600111222",
+// 				passwordHash: hashPasswordSync("correct-password"),
+// 				isAdmin: false,
+// 				active: true,
+// 				createdAt: new Date(),
+// 				updatedAt: null,
+// 			};
 
 export class InMemoryAuthRepository implements IAuthRepository {
 	private readonly users: Player[];
@@ -23,56 +22,7 @@ export class InMemoryAuthRepository implements IAuthRepository {
 
 	constructor(initialUsers: readonly Player[] = []) {
 		this.users = [...initialUsers];
-
-		if (
-			DEVELOPMENT_TEST_USER &&
-			!this.users.some(
-				(user) => user.email.trim().toLowerCase() === "player@example.com",
-			)
-		) {
-			this.users.push({ ...DEVELOPMENT_TEST_USER });
-		}
 	}
-
-	async findUserByEmail(email: string): Promise<Player | undefined> {
-		const normalizedEmail = email.trim().toLowerCase();
-		return this.users.find(
-			(user) => user.email.trim().toLowerCase() === normalizedEmail,
-		);
-	}
-
-	async findUserById(playerId: string): Promise<Player | undefined> {
-		return this.users.find((user) => user.id === playerId);
-	}
-
-	// async updateOwnPlayerProfile(
-	// 	playerId: string,
-	// 	update: { name?: string; email?: string; phone?: string },
-	// ) {
-	// 	const player = this.users.find((user) => user.id === playerId);
-	// 	if (!player?.active) {
-	// 		return { status: "not-found" } as const;
-	// 	}
-
-	// 	const normalizedEmail = update.email?.trim().toLowerCase();
-	// 	if (
-	// 		normalizedEmail &&
-	// 		this.users.some(
-	// 			(user) =>
-	// 				user.id !== playerId &&
-	// 				user.email.trim().toLowerCase() === normalizedEmail,
-	// 		)
-	// 	) {
-	// 		return { status: "email-conflict" } as const;
-	// 	}
-
-	// 	if (update.name !== undefined) player.name = update.name.trim();
-	// 	if (normalizedEmail !== undefined) player.email = normalizedEmail;
-	// 	if (update.phone !== undefined) player.phone = update.phone.trim();
-	// 	player.updatedAt = new Date();
-
-	// 	return { status: "updated", player: { ...player } } as const;
-	// }
 
 	async updatePasswordHash(
 		playerId: string,

@@ -19,6 +19,6 @@ export interface PlayerProfileUpdate {
 }
 
 export type PlayerProfileUpdateResult =
-	| { status: "updated"; player: PlayerProfile }
+	| { status: "updated"; player: Player }
 	| { status: "not-found" }
 	| { status: "email-conflict" };
