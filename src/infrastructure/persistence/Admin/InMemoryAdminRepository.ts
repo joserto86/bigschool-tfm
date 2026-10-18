@@ -1,21 +1,9 @@
+import { randomUUID } from "crypto";
 import { Player } from "../../../types/player";
 import { AdminRecord, IAdminRepository } from "./IAdminRepository";
 
 export class InMemoryAdminRepository implements IAdminRepository {
 	private readonly players = new Map<string, Player>();
-
-	async findByEmail(email: string): Promise<boolean> {
-		return this.players.has(email.trim().toLowerCase());
-	}
-
-	async findById(id: string): Promise<Player | null> {
-		for (const player of this.players.values()) {
-			if (player.id === id) {
-				return player;
-			}
-		}
-		return null;
-	}
 
 	async createAdmin(player: AdminRecord): Promise<boolean> {
 		const email = player.email.trim().toLowerCase();
@@ -24,7 +12,7 @@ export class InMemoryAdminRepository implements IAdminRepository {
 		}
 
 		const newPlayer: Player = {
-			id: crypto.randomUUID(),
+			id: randomUUID(),
 			name: player.name,
 			email: email,
 			phone: null,

@@ -46,9 +46,9 @@ describe("Matches API", () => {
 			expect(missing.body.code).toBe("AUTHENTICATION_FAILED");
 		});
 
-		it("creates a match in OPEN status with no players", async () => {
+		it("creates a match in OPEN status with the authenticated player registered", async () => {
 			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
-			
+
 			const response = await request(app)
 				.post("/matches")
 				.set("Authorization", authorization)
@@ -58,7 +58,13 @@ describe("Matches API", () => {
 			expect(response.body).toMatchObject({
 				dateTime: dateTime,
 				status: "OPEN",
-				players: [],
+				players: [
+					{
+						playerId: "test-player",
+						slot: 1,
+						confirmation: null,
+					},
+				],
 			});
 			expect(response.body.id).toBeTruthy();
 		});

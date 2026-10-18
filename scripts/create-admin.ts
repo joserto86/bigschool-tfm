@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { inspect } from "node:util";
 import { CreateAdminUseCase } from "../src/domain/Admin/CreateAdminUseCase.js";
 import { PrismaAdminRepository } from "../src/infrastructure/persistence/Admin/PrismaAdminRepository.js";
+import { PrismaPlayerRepository } from "../src/infrastructure/persistence/Player/PrismaPlayerRepository.js";
 
 async function main(): Promise<void> {
 	if (!process.env.DATABASE_URL) {
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
 	try {
 		const createAdmin = new CreateAdminUseCase(
 			new PrismaAdminRepository(database),
+			new PrismaPlayerRepository(database)
 		);
 		const result = await createAdmin.execute({
 			email: await input({ message: "Administrator email" }),

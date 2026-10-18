@@ -1,49 +1,11 @@
-import { PrismaClient } from "@prisma/client";
-import { IAuthRepository, IRefreshTokenRecord } from "./IAuthRepository";
-import { Player } from "../../../types/player";
+import { Prisma, PrismaClient } from "@prisma/client";
+import {
+	IAuthRepository,
+	IRefreshTokenRecord,
+} from "./IAuthRepository";
 
 export class PrismaAuthRepository implements IAuthRepository {
 	constructor(private readonly prisma: PrismaClient) {}
-
-	async findUserByEmail(email: string): Promise<Player | undefined> {
-		const user = await this.prisma.player.findUnique({
-			where: { email: email.trim().toLowerCase() },
-		});
-
-		if (!user) return undefined;
-
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone ?? undefined,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
-	}
-
-	async findUserById(playerId: string): Promise<Player | undefined> {
-		const user = await this.prisma.player.findUnique({
-			where: { id: playerId, active: true },
-		});
-
-		if (!user) return undefined;
-
-		return {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			passwordHash: user.passwordHash,
-			phone: user.phone ?? undefined,
-			isAdmin: user.isAdmin,
-			active: user.active,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt ?? undefined,
-		};
-	}
 
 	async updatePasswordHash(
 		playerId: string,

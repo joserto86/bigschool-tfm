@@ -6,14 +6,19 @@ import {
 } from "../domain/Admin/CreateAdminUseCase.js";
 import { verifyPassword } from "../domain/Auth/Password.js";
 import { InMemoryAdminRepository } from "../infrastructure/persistence/Admin/InMemoryAdminRepository.js";
+import { InMemoryPlayerRepository } from "../infrastructure/persistence/Player/InMemoryPlayerRepository.js";
+import { IPlayerRepository } from "../infrastructure/persistence/Player/IPlayerRepository.js";
+import { IAdminRepository } from "../infrastructure/persistence/Admin/IAdminRepository.js";
 
 describe("CreateAdminUseCase", () => {
-	let adminRepository: InMemoryAdminRepository;
+	let adminRepository: IAdminRepository;
+	let playerRepository: IPlayerRepository;
 	let useCase: CreateAdminUseCase;
 
 	beforeEach(() => {
 		adminRepository = new InMemoryAdminRepository();
-		useCase = new CreateAdminUseCase(adminRepository);
+		playerRepository = new InMemoryPlayerRepository();
+		useCase = new CreateAdminUseCase(adminRepository, playerRepository);
 	});
 
 	it("creates an active administrator with a normalized email and a password hash", async () => {
@@ -81,7 +86,7 @@ describe("CreateAdminUseCase", () => {
 	});
 
 	it("rejects invalid input before querying the database", async () => {
-		const findByEmailSpy = vi.spyOn(adminRepository, "findByEmail");
+		const findByEmailSpy = vi.spyOn(playerRepository, "findByEmail");
 		const createAdminSpy = vi.spyOn(adminRepository, "createAdmin");
 
 		await expect(

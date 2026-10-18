@@ -29,9 +29,9 @@ tags:
   - name: Matches
     description: Operaciones sobre partidos
   - name: Players
-    description: Inscripción y desinscripción de jugadores
-  - name: Confirmations
-    description: Confirmación o rechazo de partidos completados
+    description: Perfil propio, inscripción, desinscripción y confirmación de partidos
+  - name: Admin Players
+    description: Gestión administrativa de las cuentas de jugadores
   - name: Auth
     description: Autenticación y gestión de credenciales
 
@@ -42,6 +42,9 @@ paths:
       summary: Crear un partido
       description: |
         Crea un nuevo partido en estado OPEN.
+
+        El jugador autenticado queda inscrito automáticamente en el partido,
+        en el primer hueco disponible. Su identidad se obtiene del token de acceso Bearer.
 
         Se permite crear varios partidos con la misma fecha y hora.
         La API genera el matchId.
@@ -67,11 +70,18 @@ paths:
                 id: match-123
                 dateTime: '2026-10-10T18:00:00+02:00'
                 status: OPEN
-                players: []
+                players:
+                  - playerId: player-1
+                    slot: 1
+                    confirmation: null
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      x-business-rules:
+        - Player identity must be derived from the authenticated access token.
+        - The authenticated player is automatically registered in the new match.
+        - The match starts in OPEN status with the creator in the first slot.
 
     get:
       tags: [Matches]
@@ -147,7 +157,9 @@ paths:
       tags: [Players]
       summary: Inscribir un jugador en un partido
       description: |
-        Inscribe al jugador en el siguiente hueco libre.
+        Inscribe al jugador autenticado en el siguiente hueco libre.
+
+        La identidad del jugador se obtiene del token de acceso Bearer.
 
         El slot es calculado por el servidor y no puede ser elegido por el cliente.
 
@@ -156,14 +168,6 @@ paths:
       operationId: joinMatch
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/JoinMatchRequest'
-            example:
-              playerId: player-2
       responses:
         '201':
           description: Jugador inscrito correctamente
@@ -188,19 +192,17 @@ paths:
       x-business-rules:
         - Match must exist.
         - Match status must be OPEN.
+        - Player identity must be derived from the authenticated access token.
         - Player must not already be registered in the match.
         - A free slot must exist.
         - Fourth registered player transitions the match to COMPLETED.
 
-  /matches/{matchId}/players/{playerId}:
-    parameters:
-      - $ref: '#/components/parameters/MatchId'
-      - $ref: '#/components/parameters/PlayerId'
     delete:
       tags: [Players]
       summary: Desinscribir un jugador
       description: |
-        Elimina la inscripción del jugador.
+        Elimina la inscripción del jugador autenticado, cuya identidad se obtiene
+        del token de acceso Bearer.
 
         Solo está permitido si el partido está en estado OPEN.
         Si el jugador era el único inscrito, el partido completo se elimina.
@@ -218,17 +220,19 @@ paths:
           $ref: '#/components/responses/Conflict'
       x-business-rules:
         - Match status must be OPEN.
-        - Player must belong to the match.
+        - The authenticated player must belong to the match.
         - If this is the last player, delete the match.
 
   /matches/{matchId}/confirmation:
     parameters:
       - $ref: '#/components/parameters/MatchId'
     post:
-      tags: [Confirmations]
+      tags: [Players]
       summary: Confirmar o rechazar un partido
       description: |
-        Registra la decisión de un jugador sobre un partido COMPLETED.
+        Registra la decisión del jugador autenticado sobre un partido COMPLETED.
+
+        La identidad del jugador se obtiene del token de acceso Bearer.
 
         - DECLINED: el partido pasa inmediatamente a CANCELLED.
         - CONFIRMED: si los cuatro jugadores están CONFIRMED, el partido pasa a CONFIRMED.
@@ -245,12 +249,10 @@ paths:
               confirm:
                 summary: Confirmar
                 value:
-                  playerId: player-1
                   decision: CONFIRMED
               decline:
                 summary: Rechazar
                 value:
-                  playerId: player-1
                   decision: DECLINED
       responses:
         '200':
@@ -291,7 +293,7 @@ paths:
           $ref: '#/components/responses/Conflict'
       x-business-rules:
         - Match status must be COMPLETED.
-        - Player must belong to the match.
+        - The authenticated player must belong to the match.
         - Decision must be CONFIRMED or DECLINED.
         - Any DECLINED decision transitions the match to CANCELLED.
         - Four CONFIRMED decisions transition the match to CONFIRMED.
@@ -385,6 +387,230 @@ paths:
                 $ref: '#/components/schemas/TokenPair'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /players/me:
+    get:
+      tags: [Players]
+      summary: Consultar la propia información
+      description: Devuelve únicamente la información del jugador autenticado.
+      operationId: getOwnPlayer
+      responses:
+        '200':
+          description: Información del jugador autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-business-rules:
+        - The player identity is taken from the authenticated token; clients cannot select another player.
+        - Passwords and password hashes are never returned.
+    patch:
+      tags: [Players]
+      summary: Actualizar la propia información
+      description: Actualiza únicamente los datos editables del jugador autenticado.
+      operationId: updateOwnPlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnPlayerRequest'
+            example:
+              name: Alex Nuevo Nombre
+              email: alex@example.com
+              phone: '+34600111222'
+      responses:
+        '200':
+          description: Información del jugador actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - The player identity is taken from the authenticated token; clients cannot select another player.
+        - Only name, email, and phone can be updated.
+        - Active status and administrator role cannot be changed through this operation.
+        - Password changes use the authentication flow.
+        - Email must be unique after normalization.
+
+  /admin/players:
+    get:
+      tags: [Admin Players]
+      summary: Listar jugadores
+      description: Requiere autenticación y rol de administrador. Devuelve la lista de jugadores sin contraseñas ni hashes.
+      operationId: listPlayers
+      responses:
+        '200':
+          description: Lista de jugadores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Admin Players]
+      summary: Crear un jugador
+      description: Crea una cuenta de jugador. Requiere autenticación y rol de administrador.
+      operationId: createPlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlayerRequest'
+            example:
+              name: Alex Jugador
+              email: jugador@example.com
+              password: contraseña-segura
+              phone: '+34600111222'
+              active: true
+      responses:
+        '201':
+          description: Jugador creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - Email is normalized by trimming whitespace and converting it to lowercase.
+        - Email must be unique after normalization.
+        - Password must be stored as a hash and must never be returned by the API.
+        - Player identifiers and timestamps are generated by the server.
+
+  /admin/players/{playerId}:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    get:
+      tags: [Admin Players]
+      summary: Consultar un jugador
+      description: Requiere autenticación y rol de administrador; permite consultar cualquier jugador.
+      operationId: getPlayer
+      responses:
+        '200':
+          description: Jugador encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Admin Players]
+      summary: Actualizar los datos de un jugador
+      description: Requiere autenticación y rol de administrador. No modifica el estado ni la contraseña.
+      operationId: updatePlayer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlayerRequest'
+            example:
+              name: Alex Nuevo Nombre
+              email: alex@example.com
+              phone: '+34600111222'
+              isAdmin: false
+      responses:
+        '200':
+          description: Jugador actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-business-rules:
+        - Requires administrator privileges and can update any player.
+        - Only name, email, phone, and isAdmin can be updated.
+        - Email must be unique after normalization.
+        - Password changes use the authentication flow.
+    delete:
+      tags: [Admin Players]
+      summary: Eliminar un jugador
+      description: Requiere autenticación y rol de administrador; permite eliminar cualquier jugador.
+      operationId: deletePlayer
+      responses:
+        '204':
+          description: Jugador eliminado correctamente.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/players/{playerId}/status:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    patch:
+      tags: [Admin Players]
+      summary: Activar o inactivar un jugador
+      description: Requiere autenticación y rol de administrador.
+      operationId: updatePlayerStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlayerStatusRequest'
+            examples:
+              activate:
+                summary: Activar jugador
+                value:
+                  active: true
+              deactivate:
+                summary: Inactivar jugador
+                value:
+                  active: false
+      responses:
+        '200':
+          description: Estado del jugador actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-business-rules:
+        - Requires administrator privileges and can activate or deactivate any player.
+        - Player status cannot be changed through the general player update operation.
 
 components:
   parameters:
@@ -497,6 +723,110 @@ components:
           nullable: true
           enum: [PENDING, CONFIRMED, DECLINED]
           description: Null mientras el partido está OPEN.
+    Player:
+      type: object
+      required: [playerId, name, email, phone, active, isAdmin, createdAt, updatedAt]
+      properties:
+        playerId:
+          type: string
+          minLength: 1
+          readOnly: true
+          example: player-123
+        name:
+          type: string
+          minLength: 1
+          example: Alex Jugador
+        email:
+          type: string
+          format: email
+          example: jugador@example.com
+        phone:
+          type: string
+          minLength: 1
+          example: '+34600111222'
+        active:
+          type: boolean
+          example: true
+        isAdmin:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2026-10-12T11:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2026-10-12T11:30:00Z'
+      description: Nunca incluye la contraseña ni su hash.
+    CreatePlayerRequest:
+      type: object
+      required: [name, email, password, phone, active]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+        phone:
+          type: string
+          minLength: 1
+        active:
+          type: boolean
+    UpdatePlayerRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 1
+        isAdmin:
+          type: boolean
+    UpdateOwnPlayerRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 1
+    UpdatePlayerStatusRequest:
+      type: object
+      required: [active]
+      additionalProperties: false
+      properties:
+        active:
+          type: boolean
+    PlayerListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
     Match:
       type: object
       required: [id, dateTime, status, players]
@@ -523,14 +853,6 @@ components:
           type: string
           format: date-time
           example: '2026-10-10T18:00:00+02:00'
-    JoinMatchRequest:
-      type: object
-      required: [playerId]
-      properties:
-        playerId:
-          type: string
-          minLength: 1
-          example: player-2
     JoinMatchResult:
       type: object
       required: [matchId, playerId, slot, matchStatus]
@@ -555,12 +877,8 @@ components:
           example: null
     ConfirmationRequest:
       type: object
-      required: [playerId, decision]
+      required: [decision]
       properties:
-        playerId:
-          type: string
-          minLength: 1
-          example: player-1
         decision:
           $ref: '#/components/schemas/ConfirmationDecision'
     ConfirmationResult:
@@ -626,6 +944,15 @@ components:
           example:
             code: AUTHENTICATION_FAILED
             message: Authentication failed.
+    Forbidden:
+      description: El usuario autenticado no tiene permisos para realizar esta operación.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: FORBIDDEN
+            message: Administrator privileges are required.
     Conflict:
       description: La operación entra en conflicto con el estado actual del recurso o una regla de negocio.
       content:
