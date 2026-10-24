@@ -1,5 +1,5 @@
 ---
-name: "Pruebas Vitest"
+name: "pruebas-vitest"
 description: "Use when writing, updating, or reviewing Vitest and Supertest API tests in src/tests. Covers isolated app fixtures, JWT environment setup, HTTP assertions, and test scope."
 applyTo: "src/tests/**/*.test.ts"
 ---
