@@ -9,6 +9,7 @@ import { createAuthRouter } from "./infrastructure/transport/routes/authRoutes";
 import { createMatchesRouter } from "./infrastructure/transport/routes/matchesRoutes";
 import { createPlayersRouter } from "./infrastructure/transport/routes/playersRoutes";
 import { createAdminPlayersRouter } from "./infrastructure/transport/routes/adminPlayersRoutes";
+import { createAdminMatchesRouter } from "./infrastructure/transport/routes/adminMatchesRoutes";
 import { createAuthenticateMiddleware } from "./middleware/authenticate";
 import { requireAdmin } from "./middleware/requireAdmin";
 import { PrismaPlayerRepository } from "./infrastructure/persistence/Player/PrismaPlayerRepository";
@@ -40,6 +41,12 @@ export function createApp(useDatabase: boolean = false): Application {
 
 	app.use("/auth", createAuthRouter(authRepository, playerRepository, signingKey, authenticate));
 	app.use("/admin/players", authenticate, requireAdmin, createAdminPlayersRouter(playerRepository));
+	app.use(
+		"/admin/matches",
+		authenticate,
+		requireAdmin,
+		createAdminMatchesRouter(matchRepository, playerRepository),
+	);
 	app.use("/players", authenticate, createPlayersRouter(playerRepository));
 	app.use("/matches", authenticate, createMatchesRouter(matchRepository));
 

@@ -1,5 +1,5 @@
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-import { MatchNotFoundError } from "./GetMatchByIdUseCase";
+import { MatchNotFoundError } from "./GetMatchesUseCase";
 
 export interface ConfirmMatchInput {
 	matchId: string;

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { CreateMatchUseCase } from "../../../domain/Match/CreateMatchUseCase";
-import { GetMatchesByDateTimeUseCase } from "../../../domain/Match/GetMatchesByDateTimeUseCase";
-import { GetMatchByIdUseCase } from "../../../domain/Match/GetMatchByIdUseCase";
+import { GetMatchesUseCase } from "../../../domain/Match/GetMatchesUseCase";
 import { JoinMatchUseCase } from "../../../domain/Match/JoinMatchUseCase";
 import { LeaveMatchUseCase } from "../../../domain/Match/LeaveMatchUseCase";
 import { ConfirmMatchUseCase } from "../../../domain/Match/ConfirmMatchUseCase";
@@ -12,18 +11,14 @@ export function createMatchesRouter(matchRepository: IMatchRepository): Router {
 	const router = Router();
 
 	const createMatchUseCase = new CreateMatchUseCase(matchRepository);
-	const getMatchesByDateTimeUseCase = new GetMatchesByDateTimeUseCase(
-		matchRepository,
-	);
-	const getMatchByIdUseCase = new GetMatchByIdUseCase(matchRepository);
+	const getMatchesUseCase = new GetMatchesUseCase(matchRepository);
 	const joinMatchUseCase = new JoinMatchUseCase(matchRepository);
 	const leaveMatchUseCase = new LeaveMatchUseCase(matchRepository);
 	const confirmMatchUseCase = new ConfirmMatchUseCase(matchRepository);
 
 	const matchesController = new MatchesController(
 		createMatchUseCase,
-		getMatchesByDateTimeUseCase,
-		getMatchByIdUseCase,
+		getMatchesUseCase,
 		joinMatchUseCase,
 		leaveMatchUseCase,
 		confirmMatchUseCase,

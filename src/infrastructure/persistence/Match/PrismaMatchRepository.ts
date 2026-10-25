@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { Match, MatchPlayer } from "../../../types/match";
+import { Match } from "../../../types/match";
 import { IMatchRepository } from "./IMatchRepository";
 
 export class PrismaMatchRepository implements IMatchRepository {
@@ -12,7 +12,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 				dateTime: this.parseDateTime(match.dateTime),
 				status: match.status,
 				players: {
-					create: match.players.map((player: MatchPlayer) => ({
+					create: match.players.map((player) => ({
 						playerId: player.playerId,
 						slot: player.slot,
 						confirmation: player.confirmation ?? "PENDING",
@@ -28,7 +28,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			id: created.id,
 			dateTime: created.dateTime.toISOString(),
 			status: created.status as Match["status"],
-			players: created.players.map((player: MatchPlayer) => ({
+			players: created.players.map((player) => ({
 				playerId: player.playerId,
 				slot: player.slot,
 				confirmation: (player.confirmation ??
@@ -47,7 +47,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 				status: match.status,
 				players: {
 					deleteMany: {},
-					create: match.players.map((player: MatchPlayer) => ({
+					create: match.players.map((player) => ({
 						playerId: player.playerId,
 						slot: player.slot,
 						confirmation: player.confirmation ?? "PENDING",
@@ -62,7 +62,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			id: updated.id,
 			dateTime: updated.dateTime.toISOString(),
 			status: updated.status as Match["status"],
-			players: updated.players.map((player: MatchPlayer) => ({
+			players: updated.players.map((player) => ({
 				playerId: player.playerId,
 				slot: player.slot,
 				confirmation: (player.confirmation ??
@@ -73,13 +73,21 @@ export class PrismaMatchRepository implements IMatchRepository {
 		};
 	}
 
+	async list(): Promise<Match[]> {
+		const matches = await this.prisma.match.findMany({
+			include: { players: true },
+		});
+
+		return matches.map((match) => this.toDomain(match));
+	}
+
 	async findByDateTime(dateTime: string): Promise<Match[]> {
 		const matches = await this.prisma.match.findMany({
 			where: { dateTime: this.parseDateTime(dateTime) },
 			include: { players: true },
 		});
 
-		return matches.map((match: Match) => this.toDomain(match));
+		return matches.map((match) => this.toDomain(match));
 	}
 
 	async findById(matchId: string): Promise<Match | undefined> {
