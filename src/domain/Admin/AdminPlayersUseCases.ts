@@ -1,8 +1,17 @@
 import { z } from "zod";
-import { hashPassword } from "../Auth/Password";
-import { Player, AdminPlayerCreate, PlayerUpdate, AdminPlayerProfile } from "../../types/player";
-import { 	IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
-import { pl } from "zod/locales";
+import { hashPassword } from "../Auth/Util/Password";
+import {
+	Player,
+	AdminPlayerCreate,
+	PlayerUpdate,
+	AdminPlayerProfile,
+} from "../../types/player";
+import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
+import {
+	AdminPlayerEmailConflictError,
+	AdminPlayerNotFoundError,
+	InvalidAdminPlayerRequestError,
+} from "./error/PlayerError";
 
 const createPlayerSchema = z
 	.object({
@@ -11,7 +20,7 @@ const createPlayerSchema = z
 		password: z.string().min(8).max(128),
 		phone: z.string().trim().min(1),
 		isAdmin: z.boolean().optional(),
-		active: z.boolean().optional()
+		active: z.boolean().optional(),
 	})
 	.strict();
 
@@ -26,31 +35,7 @@ const updatePlayerSchema = z
 	.strict()
 	.refine((update) => Object.keys(update).length > 0);
 
-const updatePlayerStatusSchema = z
-	.object({ active: z.boolean() })
-	.strict();
-
-
-export class InvalidAdminPlayerRequestError extends Error {
-	constructor() {
-		super("The player request is invalid.");
-		this.name = "InvalidAdminPlayerRequestError";
-	}
-}
-
-export class AdminPlayerNotFoundError extends Error {
-	constructor() {
-		super("Player was not found.");
-		this.name = "AdminPlayerNotFoundError";
-	}
-}
-
-export class AdminPlayerEmailConflictError extends Error {
-	constructor() {
-		super("A player with this email already exists.");
-		this.name = "AdminPlayerEmailConflictError";
-	}
-}
+const updatePlayerStatusSchema = z.object({ active: z.boolean() }).strict();
 
 function toAdminPlayerProfile(player: Player): AdminPlayerProfile {
 	return {
@@ -70,7 +55,7 @@ export class AdminPlayersUseCases {
 
 	async listPlayers(): Promise<AdminPlayerProfile[]> {
 		const players = await this.repository.list();
-		return  players.map(toAdminPlayerProfile) ;
+		return players.map(toAdminPlayerProfile);
 	}
 
 	async createPlayer(input: unknown): Promise<AdminPlayerProfile> {
@@ -89,7 +74,6 @@ export class AdminPlayersUseCases {
 		};
 
 		const player = await this.repository.create(playerInput);
-
 
 		if (!player) {
 			console.log("Email conflict detected for email:", playerInput.email); // Log the email that caused the conflict

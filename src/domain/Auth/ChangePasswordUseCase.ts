@@ -1,17 +1,12 @@
 import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
-import { hashPassword, verifyPassword } from "./Password";
-import { AuthenticationFailedError } from "./LoginUseCase";
+import { hashPassword, verifyPassword } from "./Util/Password";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
-
-const MIN_PASSWORD_LENGTH = Number.parseInt(process.env.MIN_PASSWORD_LENGTH ?? "8", 10);
-const MAX_PASSWORD_LENGTH = Number.parseInt(process.env.MAX_PASSWORD_LENGTH ?? "128", 10);
-
-export class InvalidPasswordRequestError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "InvalidPasswordRequestError";
-	}
-}
+import {
+	AuthenticationFailedError,
+	InvalidPasswordRequestError,
+} from "./Error";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./Constants";
+import { ChangePasswordDto } from "./dto/ChangePasswordDto";
 
 export class ChangePasswordUseCase {
 	constructor(
@@ -21,7 +16,7 @@ export class ChangePasswordUseCase {
 
 	async execute(
 		playerId: string,
-		input: { currentPassword: string; newPassword: string },
+		input: ChangePasswordDto
 	): Promise<void> {
 		if (
 			typeof input.currentPassword !== "string" ||

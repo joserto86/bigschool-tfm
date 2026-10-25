@@ -1,10 +1,21 @@
 import { z } from "zod";
 import { CreateMatchUseCase } from "../Match/CreateMatchUseCase";
 import { GetMatchesUseCase } from "../Match/GetMatchesUseCase";
-import { MatchNotOpenError } from "../Match/LeaveMatchUseCase";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 import { Match, MatchStatus } from "../../types/match";
+import {
+	AdminMatchFullError,
+	AdminMatchPlayerAlreadyRegisteredError,
+	AdminMatchPlayerNotFoundError,
+	AdminMatchPlayerNotRegisteredError,
+	AdminMatchPlayerRemovalNotAllowedError,
+	AdminMatchRequiresFourPlayersError,
+	InvalidAdminMatchRequestError,
+	InvalidAdminMatchTransitionError,
+} from "./error/MatchError";
+import { MatchNotOpenError } from "../Match/error/error";
+import { FULL_MATCH_PLAYER_COUNT } from "../Match/Constants";
 
 const createMatchSchema = z
 	.object({
@@ -19,46 +30,6 @@ const updateStatusSchema = z
 		status: z.enum(["COMPLETED", "CONFIRMED", "CANCELLED"]),
 	})
 	.strict();
-
-const MAX_PLAYERS = 4;
-
-export class InvalidAdminMatchRequestError extends Error {
-	constructor() {
-		super("The match request is invalid.");
-		this.name = "InvalidAdminMatchRequestError";
-	}
-}
-
-export class AdminMatchPlayerNotFoundError extends Error {
-	constructor(playerId: string) {
-		super(`Player '${playerId}' was not found.`);
-		this.name = "AdminMatchPlayerNotFoundError";
-	}
-}
-
-export class AdminMatchPlayerNotRegisteredError extends Error {
-	constructor(playerId: string, matchId: string) {
-		super(`Player '${playerId}' is not registered in match '${matchId}'.`);
-		this.name = "AdminMatchPlayerNotRegisteredError";
-	}
-}
-
-export class AdminMatchPlayerRemovalNotAllowedError extends Error {
-	constructor() {
-		super(
-			"A player cannot be removed while the match is CONFIRMED or CANCELLED.",
-		);
-		this.name = "AdminMatchPlayerRemovalNotAllowedError";
-	}
-}
-
-export class InvalidAdminMatchTransitionError extends Error {
-	constructor(from: MatchStatus, to: MatchStatus) {
-		super(`The transition from '${from}' to '${to}' is not allowed.`);
-		this.name = "InvalidAdminMatchTransitionError";
-	}
-}
-
 export class AdminMatchesUseCases {
 	private readonly createMatchUseCase: CreateMatchUseCase;
 	private readonly getMatchUseCase: GetMatchesUseCase;
@@ -115,13 +86,13 @@ export class AdminMatchesUseCases {
 				matchId,
 			);
 		}
-		if (match.players.length >= MAX_PLAYERS) {
+		if (match.players.length >= FULL_MATCH_PLAYER_COUNT) {
 			throw new AdminMatchFullError(matchId);
 		}
 
 		const occupiedSlots = new Set(match.players.map(({ slot }) => slot));
 		const slot = Array.from(
-			{ length: MAX_PLAYERS },
+			{ length: FULL_MATCH_PLAYER_COUNT },
 			(_, index) => index + 1,
 		).find((candidate) => !occupiedSlots.has(candidate));
 		if (slot === undefined) {
@@ -133,7 +104,7 @@ export class AdminMatchesUseCases {
 			slot,
 			confirmation: null,
 		});
-		if (match.players.length === MAX_PLAYERS) {
+		if (match.players.length === FULL_MATCH_PLAYER_COUNT) {
 			match.status = "COMPLETED";
 		}
 		match.updatedAt = new Date();
@@ -180,33 +151,15 @@ export class AdminMatchesUseCases {
 		if (!allowedTransitions[match.status].includes(nextStatus)) {
 			throw new InvalidAdminMatchTransitionError(match.status, nextStatus);
 		}
-		if (nextStatus === "COMPLETED" && match.players.length !== MAX_PLAYERS) {
+		if (
+			nextStatus === "COMPLETED" &&
+			match.players.length !== FULL_MATCH_PLAYER_COUNT
+		) {
 			throw new AdminMatchRequiresFourPlayersError();
 		}
 
 		match.status = nextStatus;
 		match.updatedAt = new Date();
 		return this.matchRepository.update(match);
-	}
-}
-
-export class AdminMatchPlayerAlreadyRegisteredError extends Error {
-	constructor(playerId: string, matchId: string) {
-		super(`Player '${playerId}' is already registered in match '${matchId}'.`);
-		this.name = "AdminMatchPlayerAlreadyRegisteredError";
-	}
-}
-
-export class AdminMatchFullError extends Error {
-	constructor(matchId: string) {
-		super(`Match '${matchId}' already has 4 players.`);
-		this.name = "AdminMatchFullError";
-	}
-}
-
-export class AdminMatchRequiresFourPlayersError extends Error {
-	constructor() {
-		super("A match must have exactly 4 players to transition to COMPLETED.");
-		this.name = "AdminMatchRequiresFourPlayersError";
 	}
 }

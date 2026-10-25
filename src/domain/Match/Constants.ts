@@ -1,0 +1,1 @@
+export const FULL_MATCH_PLAYER_COUNT = 4;

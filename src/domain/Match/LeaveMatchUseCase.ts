@@ -1,29 +1,11 @@
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-import { MatchNotFoundError } from "./GetMatchesUseCase";
-
-export interface LeaveMatchInput {
-	matchId: string;
-	playerId: string;
-}
-
-export class PlayerNotInMatchError extends Error {
-	constructor(playerId: string, matchId: string) {
-		super(`Player '${playerId}' is not registered in match '${matchId}'.`);
-		this.name = "PlayerNotInMatchError";
-	}
-}
-
-export class MatchNotOpenError extends Error {
-	constructor(matchId: string) {
-		super(`Match '${matchId}' is not open for registration.`);
-		this.name = "MatchNotOpenError";
-	}
-}
+import { LeaveMatchInputDto } from "./dto/LeaveMatchInputDto";
+import { MatchNotFoundError, MatchNotOpenError, PlayerNotInMatchError } from "./error/error";
 
 export class LeaveMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
-	async execute(input: LeaveMatchInput): Promise<void> {
+	async execute(input: LeaveMatchInputDto): Promise<void> {
 		const { matchId, playerId } = input;
 		const match = await this.matchRepository.findById(matchId);
 

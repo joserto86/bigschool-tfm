@@ -1,18 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
 import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
-import { verifyPasswordOrDummy } from "./Password";
-import { jwtAudience, jwtIssuer } from "./jwtConfig";
+import { verifyPasswordOrDummy } from "./Util/Password";
+import { jwtAudience, jwtIssuer } from "./Util/jwtConfig";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
-
-const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN
-	? Number.parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN, 10)
-	: 900;
-
-const REFRESH_TOKEN_EXPIRES_IN_SECONDS = process.env
-	.REFRESH_TOKEN_EXPIRES_IN_SECONDS
-	? Number.parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN_SECONDS, 10)
-	: 30 * 24 * 60 * 60;
+import { AuthenticationFailedError, InvalidLoginRequestError } from "./Error";
+import {
+	ACCESS_TOKEN_EXPIRES_IN,
+	REFRESH_TOKEN_EXPIRES_IN_SECONDS,
+} from "./Constants";
+import { LoginResult } from "./dto/LoginResultDto";
 
 function isValidEmail(email: string): boolean {
 	const normalizedEmail = email.trim();
@@ -26,28 +23,6 @@ function isValidEmail(email: string): boolean {
 		!domain.startsWith(".") &&
 		!domain.endsWith(".")
 	);
-}
-
-export interface LoginResult {
-	accessToken: string;
-	tokenType: "Bearer";
-	expiresIn: number;
-	refreshToken: string;
-	refreshTokenExpiresAt: string;
-}
-
-export class InvalidLoginRequestError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "InvalidLoginRequestError";
-	}
-}
-
-export class AuthenticationFailedError extends Error {
-	constructor() {
-		super("Authentication failed.");
-		this.name = "AuthenticationFailedError";
-	}
 }
 
 export class LoginUseCase {

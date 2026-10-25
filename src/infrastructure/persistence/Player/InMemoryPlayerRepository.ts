@@ -4,14 +4,12 @@ import {
 	PlayerUpdateResult,
 	AdminPlayerCreate,
 	PlayerUpdate,
-
 } from "../../../types/player";
 import {
 	AdminPlayerStatusUpdateResult,
 	IPlayerRepository,
 } from "./IPlayerRepository";
-import { hashPasswordSync } from "../../../domain/Auth/Password";
-
+import { hashPasswordSync } from "../../../domain/Auth/Util/Password";
 
 const DEVELOPMENT_TEST_USER: Player | undefined =
 	process.env.NODE_ENV === "production"
@@ -27,7 +25,6 @@ const DEVELOPMENT_TEST_USER: Player | undefined =
 				createdAt: new Date(),
 				updatedAt: null,
 			};
-
 
 export class InMemoryPlayerRepository implements IPlayerRepository {
 	private readonly players: Player[];

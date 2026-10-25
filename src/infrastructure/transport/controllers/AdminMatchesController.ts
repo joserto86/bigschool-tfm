@@ -6,13 +6,15 @@ import {
 	AdminMatchPlayerNotRegisteredError,
 	AdminMatchPlayerRemovalNotAllowedError,
 	AdminMatchRequiresFourPlayersError,
-	AdminMatchesUseCases,
 	InvalidAdminMatchRequestError,
 	InvalidAdminMatchTransitionError,
-} from "../../../domain/Admin/AdminMatchesUseCases";
-import { InvalidMatchDateTimeError } from "../../../domain/Match/CreateMatchUseCase";
-import { MatchNotFoundError } from "../../../domain/Match/GetMatchesUseCase";
-import { MatchNotOpenError } from "../../../domain/Match/LeaveMatchUseCase";
+} from "../../../domain/Admin/error/MatchError";
+import { AdminMatchesUseCases } from "../../../domain/Admin/AdminMatchesUseCases";
+import {
+	InvalidMatchDateTimeError,
+	MatchNotFoundError,
+	MatchNotOpenError,
+} from "../../../domain/Match/error/error";
 
 export class AdminMatchesController {
 	constructor(private readonly useCases: AdminMatchesUseCases) {}

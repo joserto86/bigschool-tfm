@@ -1,41 +1,28 @@
 import { z } from "zod";
 import { IAdminRepository } from "../../infrastructure/persistence/Admin/IAdminRepository";
-import { hashPassword } from "../Auth/Password";
+import { hashPassword } from "../Auth/Util/Password";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
-
-const MIN_PASSWORD_LENGTH = Number.parseInt(process.env.MIN_PASSWORD_LENGTH ?? "8", 10);
-const MAX_PASSWORD_LENGTH = Number.parseInt(process.env.MAX_PASSWORD_LENGTH ?? "128", 10);
+import {
+	AdminEmailAlreadyExistsError,
+	InvalidAdminRequestError,
+} from "./error/AdminError";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "../Auth/Constants";
+import { CreateAdminInputDto } from "./dto/CreateAdminInputDto";
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email());
 const nameSchema = z.string().trim().min(1);
-const passwordSchema = z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH);
-
-export interface CreateAdminInput {
-	email: string;
-	name: string;
-	password: string;
-}
-
-export class InvalidAdminRequestError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "InvalidAdminRequestError";
-	}
-}
-
-export class AdminEmailAlreadyExistsError extends Error {
-	constructor() {
-		super("A user with this email already exists.");
-		this.name = "AdminEmailAlreadyExistsError";
-	}
-}
+const passwordSchema = z
+	.string()
+	.min(MIN_PASSWORD_LENGTH)
+	.max(MAX_PASSWORD_LENGTH);
 
 export class CreateAdminUseCase {
-	constructor(private readonly adminRepository: IAdminRepository,
-							private readonly playerRepository: IPlayerRepository
-	) { }
+	constructor(
+		private readonly adminRepository: IAdminRepository,
+		private readonly playerRepository: IPlayerRepository,
+	) {}
 
-	async execute(input: CreateAdminInput): Promise<{ email: string }> {
+	async execute(input: CreateAdminInputDto): Promise<{ email: string }> {
 		const email = emailSchema.safeParse(input.email);
 		if (!email.success) {
 			throw new InvalidAdminRequestError("Enter a valid email address.");

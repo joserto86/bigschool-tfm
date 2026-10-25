@@ -1,28 +1,14 @@
 import { Request, Response } from "express";
-import {
-	CreateMatchUseCase,
-	InvalidMatchDateTimeError,
-} from "../../../domain/Match/CreateMatchUseCase";
-import {
-	GetMatchesUseCase,
-	MatchNotFoundError,
-	MissingDateTimeQueryError,
-} from "../../../domain/Match/GetMatchesUseCase";
+import { CreateMatchUseCase } from "../../../domain/Match/CreateMatchUseCase";
+import { GetMatchesUseCase } from "../../../domain/Match/GetMatchesUseCase";
 import {
 	JoinMatchUseCase,
 	MatchFullError,
 	PlayerAlreadyRegisteredError,
 } from "../../../domain/Match/JoinMatchUseCase";
-import {
-	LeaveMatchUseCase,
-	MatchNotOpenError,
-	PlayerNotInMatchError,
-} from "../../../domain/Match/LeaveMatchUseCase";
-import {
-	ConfirmMatchUseCase,
-	MatchNotCompletedError,
-	PlayerNotInMatchError as PlayerNotInConfirmationError,
-} from "../../../domain/Match/ConfirmMatchUseCase";
+import { LeaveMatchUseCase } from "../../../domain/Match/LeaveMatchUseCase";
+import { ConfirmMatchUseCase } from "../../../domain/Match/ConfirmMatchUseCase";
+import { InvalidMatchDateTimeError, MatchNotCompletedError, MatchNotFoundError, MatchNotOpenError, MissingDateTimeQueryError, PlayerNotInMatchError } from "../../../domain/Match/error/error";
 
 export class MatchesController {
 	constructor(
@@ -54,9 +40,9 @@ export class MatchesController {
 
 	getMatches = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const items = await this.getMatchesUseCase.getMatchesByDateTime({
-				dateTime: req.query.dateTime as string,
-			});
+			const items = await this.getMatchesUseCase.getMatchesByDateTime(
+				req.query.dateTime as string,
+			);
 			res.status(200).json({ items });
 		} catch (error) {
 			if (error instanceof MissingDateTimeQueryError) {
@@ -166,7 +152,7 @@ export class MatchesController {
 			}
 			if (
 				error instanceof MatchNotCompletedError ||
-				error instanceof PlayerNotInConfirmationError
+				error instanceof PlayerNotInMatchError
 			) {
 				res.status(409).json({
 					code: "MATCH_NOT_COMPLETED",

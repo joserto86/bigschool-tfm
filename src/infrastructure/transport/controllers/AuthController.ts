@@ -1,14 +1,8 @@
 import { Request, Response } from "express";
-import {
-	AuthenticationFailedError,
-	InvalidLoginRequestError,
-	LoginUseCase,
-} from "../../../domain/Auth/LoginUseCase";
-import {
-	ChangePasswordUseCase,
-	InvalidPasswordRequestError,
-} from "../../../domain/Auth/ChangePasswordUseCase";
+import { LoginUseCase } from "../../../domain/Auth/LoginUseCase";
+import { ChangePasswordUseCase } from "../../../domain/Auth/ChangePasswordUseCase";
 import { RefreshTokenUseCase } from "../../../domain/Auth/RefreshTokenUseCase";
+import { AuthenticationFailedError, InvalidLoginRequestError, InvalidPasswordRequestError } from "../../../domain/Auth/Error";
 
 export class AuthController {
 	constructor(

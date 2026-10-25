@@ -1,7 +1,7 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 import { jwtVerify } from "jose";
-import { jwtAudience, jwtIssuer } from "../domain/Auth/jwtConfig";
-import { AuthenticationFailedError } from "../domain/Auth/LoginUseCase";
+import { jwtAudience, jwtIssuer } from "../domain/Auth/Util/jwtConfig";
+import { AuthenticationFailedError } from "../domain/Auth/Error";
 
 export function createAuthenticateMiddleware(
 	signingKey: Uint8Array,
@@ -12,7 +12,7 @@ export function createAuthenticateMiddleware(
 			const separator = authorization.indexOf(" ");
 			const scheme = separator > 0 ? authorization.slice(0, separator) : "";
 			const token = separator > 0 ? authorization.slice(separator).trim() : "";
-			
+
 			if (scheme.toLowerCase() !== "bearer" || !token) {
 				throw new AuthenticationFailedError();
 			}

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	AdminEmailAlreadyExistsError,
-	CreateAdminUseCase,
-	InvalidAdminRequestError,
-} from "../domain/Admin/CreateAdminUseCase.js";
-import { verifyPassword } from "../domain/Auth/Password.js";
+import { CreateAdminUseCase } from "../domain/Admin/CreateAdminUseCase.js";
+import { verifyPassword } from "../domain/Auth/Util/Password.js";
 import { InMemoryAdminRepository } from "../infrastructure/persistence/Admin/InMemoryAdminRepository.js";
 import { InMemoryPlayerRepository } from "../infrastructure/persistence/Player/InMemoryPlayerRepository.js";
 import { IPlayerRepository } from "../infrastructure/persistence/Player/IPlayerRepository.js";
 import { IAdminRepository } from "../infrastructure/persistence/Admin/IAdminRepository.js";
+import {
+	AdminEmailAlreadyExistsError,
+	InvalidAdminRequestError,
+} from "../domain/Admin/error/AdminError.js";
 
 describe("CreateAdminUseCase", () => {
 	let adminRepository: IAdminRepository;

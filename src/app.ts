@@ -1,5 +1,5 @@
 import express, { Request, Response, Application } from "express";
-import { resolveSigningKey } from "./domain/Auth/signingKey";
+import { resolveSigningKey } from "./domain/Auth/Util/signingKey";
 import { InMemoryAuthRepository } from "./infrastructure/persistence/Auth/InMemoryAuthRepository";
 import { PrismaAuthRepository } from "./infrastructure/persistence/Auth/PrismaAuthRepository";
 import { InMemoryMatchRepository } from "./infrastructure/persistence/Match/InMemoryMatchRepository";

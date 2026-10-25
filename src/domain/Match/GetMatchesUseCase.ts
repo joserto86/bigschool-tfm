@@ -1,27 +1,6 @@
 import { Match } from "../../types/match";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-
-export interface GetMatchByIdInput {
-	matchId: string;
-}
-
-export class MatchNotFoundError extends Error {
-	constructor(matchId: string) {
-		super(`Match '${matchId}' was not found.`);
-		this.name = "MatchNotFoundError";
-	}
-}
-
-export interface GetMatchesByDateTimeInput {
-	dateTime: string;
-}
-
-export class MissingDateTimeQueryError extends Error {
-	constructor() {
-		super("The request is invalid.");
-		this.name = "MissingDateTimeQueryError";
-	}
-}
+import { MatchNotFoundError, MissingDateTimeQueryError } from "./error/error";
 
 export class GetMatchesUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
@@ -34,9 +13,7 @@ export class GetMatchesUseCase {
 		return match;
 	}
 
-		async getMatchesByDateTime(input: GetMatchesByDateTimeInput): Promise<Match[]> {
-		const { dateTime } = input;
-
+	async getMatchesByDateTime(dateTime: string): Promise<Match[]> {
 		if (typeof dateTime !== "string" || dateTime.trim() === "") {
 			throw new MissingDateTimeQueryError();
 		}

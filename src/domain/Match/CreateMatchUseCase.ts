@@ -1,23 +1,13 @@
 import { randomUUID } from "crypto";
 import { Match } from "../../types/match";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-
-export interface CreateMatchInput {
-	dateTime: string;
-	playerId?: string;
-}
-
-export class InvalidMatchDateTimeError extends Error {
-	constructor() {
-		super("The request is invalid.");
-		this.name = "InvalidMatchDateTimeError";
-	}
-}
+import { CreateMatchInputDto } from "./dto/CreateMatchInputDto";
+import { InvalidMatchDateTimeError } from "./error/error";
 
 export class CreateMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
-	async execute(input: CreateMatchInput): Promise<Match> {
+	async execute(input: CreateMatchInputDto): Promise<Match> {
 		const { dateTime, playerId } = input;
 
 		if (typeof dateTime !== "string" || dateTime.trim() === "") {

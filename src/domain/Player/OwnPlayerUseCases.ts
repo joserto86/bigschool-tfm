@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Player, PlayerProfile, PlayerUpdate } from "../../types/player";
-import { AuthenticationFailedError } from "../Auth/LoginUseCase";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
+import { AuthenticationFailedError } from "../Auth/Error";
 
 const updateOwnPlayerSchema = z
 	.object({

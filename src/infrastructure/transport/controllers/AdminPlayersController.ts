@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
+import { AdminPlayersUseCases } from "../../../domain/Admin/AdminPlayersUseCases";
 import {
 	AdminPlayerEmailConflictError,
 	AdminPlayerNotFoundError,
-	AdminPlayersUseCases,
 	InvalidAdminPlayerRequestError,
-} from "../../../domain/Admin/AdminPlayersUseCases";
+} from "../../../domain/Admin/error/PlayerError";
 
 export class AdminPlayersController {
 	constructor(private readonly useCases: AdminPlayersUseCases) {}

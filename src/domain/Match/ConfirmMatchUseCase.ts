@@ -1,37 +1,11 @@
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-import { MatchNotFoundError } from "./GetMatchesUseCase";
-
-export interface ConfirmMatchInput {
-	matchId: string;
-	playerId: string;
-	decision: "CONFIRMED" | "DECLINED";
-}
-
-export interface ConfirmMatchResult {
-	matchId: string;
-	playerId: string;
-	decision: "CONFIRMED" | "DECLINED";
-	matchStatus: string;
-}
-
-export class MatchNotCompletedError extends Error {
-	constructor(matchId: string) {
-		super(`Match '${matchId}' is not completed.`);
-		this.name = "MatchNotCompletedError";
-	}
-}
-
-export class PlayerNotInMatchError extends Error {
-	constructor(playerId: string, matchId: string) {
-		super(`Player '${playerId}' is not registered in match '${matchId}'.`);
-		this.name = "PlayerNotInMatchError";
-	}
-}
-
+import { ConfirmMatchInputDto } from "./dto/ConfirmMatchInputDto";
+import { ConfirmMatchResultDto } from "./dto/ConfirmMatchResultDto";
+import { MatchNotCompletedError, MatchNotFoundError, PlayerNotInMatchError } from "./error/error";
 export class ConfirmMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
-	async execute(input: ConfirmMatchInput): Promise<ConfirmMatchResult> {
+	async execute(input: ConfirmMatchInputDto): Promise<ConfirmMatchResultDto> {
 		const { matchId, playerId, decision } = input;
 		const match = await this.matchRepository.findById(matchId);
 

@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT } from "jose";
 import { IAuthRepository } from "../../infrastructure/persistence/Auth/IAuthRepository";
-import { AuthenticationFailedError, LoginResult } from "./LoginUseCase";
-import { jwtAudience, jwtIssuer } from "./jwtConfig";
-
-const ACCESS_TOKEN_EXPIRES_IN = 900;
-const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 30 * 24 * 60 * 60;
+import { jwtAudience, jwtIssuer } from "./Util/jwtConfig";
+import { AuthenticationFailedError } from "./Error";
+import { LoginResultDto } from "./dto/LoginResultDto";
+import { RefreshTokenDto } from "./dto/RefreshTokenDto";
+import { ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN_SECONDS } from "./Constants";
 
 export class RefreshTokenUseCase {
 	constructor(
@@ -13,7 +13,7 @@ export class RefreshTokenUseCase {
 		private readonly signingKey: Uint8Array,
 	) {}
 
-	async execute(input: { refreshToken: string }): Promise<LoginResult> {
+	async execute(input: RefreshTokenDto): Promise<LoginResultDto> {
 		if (
 			typeof input.refreshToken !== "string" ||
 			input.refreshToken.length === 0

@@ -3,7 +3,6 @@ import { Application } from "express";
 import { SignJWT } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app";
-import { password } from "@inquirer/prompts";
 
 const JWT_SECRET = "admin-players-test-secret-with-32-bytes";
 const ADMIN_ID = "test-admin";

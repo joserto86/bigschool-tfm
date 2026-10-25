@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { AuthenticationFailedError } from "../../../domain/Auth/LoginUseCase";
 import {
 	GetOwnPlayerUseCase,
 	InvalidOwnPlayerUpdateError,
 	OwnPlayerEmailConflictError,
 	UpdateOwnPlayerUseCase,
 } from "../../../domain/Player/OwnPlayerUseCases";
+import { AuthenticationFailedError } from "../../../domain/Auth/Error";
 
 export class PlayersController {
 	constructor(
