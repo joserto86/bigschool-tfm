@@ -172,7 +172,7 @@ export class AdminMatchesUseCases {
 		const match = await this.getMatch(matchId);
 		const nextStatus = parsed.data.status;
 		const allowedTransitions: Record<MatchStatus, MatchStatus[]> = {
-			OPEN: ["COMPLETED"],
+			OPEN: ["COMPLETED", "CANCELLED"],
 			COMPLETED: ["CONFIRMED", "CANCELLED"],
 			CONFIRMED: ["CANCELLED", "COMPLETED"],
 			CANCELLED: ["COMPLETED"],

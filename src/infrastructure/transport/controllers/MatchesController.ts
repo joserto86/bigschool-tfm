@@ -55,7 +55,7 @@ export class MatchesController {
 	getMatches = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const items = await this.getMatchesUseCase.getMatchesByDateTime({
-				dateTime: req.query.dateTime,
+				dateTime: req.query.dateTime as string,
 			});
 			res.status(200).json({ items });
 		} catch (error) {

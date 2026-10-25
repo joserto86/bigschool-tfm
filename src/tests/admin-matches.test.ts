@@ -416,6 +416,18 @@ describe("Admin Matches API", () => {
 	});
 
 	describe("PATCH /admin/matches/{matchId}/status", () => {
+		it("transitions an OPEN match to CANCELLED", async () => {
+			const match = await createAdminMatch();
+
+			const response = await changeMatchStatus(match.id, "CANCELLED");
+
+			expect(response.status).toBe(200);
+			expect(response.body).toMatchObject({
+				id: match.id,
+				status: "CANCELLED",
+			});
+		});
+
 		it.each([
 			["COMPLETED", "CONFIRMED"],
 			["COMPLETED", "CANCELLED"],

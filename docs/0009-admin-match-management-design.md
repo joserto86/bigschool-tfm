@@ -30,9 +30,8 @@ Las respuestas usan el modelo `Match` existente: `id`, `dateTime`, `status` y `p
 ### Estado
 
 - Un partido no puede pasar a `COMPLETED` si no tiene exactamente cuatro jugadores.
-- El administrador solo puede cambiar manualmente el estado de `COMPLETED` a `CONFIRMED` o `CANCELLED`.
+- El administrador solo puede cambiar manualmente el estado de `COMPLETED` a `CONFIRMED` o `CANCELLED` o de `OPEN` a `CANCELLED`.
 - No se puede pasar manualmente a `CONFIRMED` sin haber estado primero en `COMPLETED`.
-- No se puede pasar manualmente a `CANCELLED` sin haber estado primero en `COMPLETED` o `CONFIRMED`.
 - No se pueden desinscribir jugadores de un partido `CONFIRMED` o `CANCELLED`, pero si se puede cambiar el estado a `COMPLETED` o para permitir la desinscripción.
 - Al desinscribir a un jugador, el partido pasa a `OPEN`. La baja administrativa reinicia las confirmaciones asociadas a las inscripciones restantes.
 - Por tanto, la baja administrativa puede reabrir un partido `CONFIRMED`. Esta excepción aplica solo a estas rutas administrativas; no cambia la regla de inmutabilidad para el flujo ordinario de partidos.

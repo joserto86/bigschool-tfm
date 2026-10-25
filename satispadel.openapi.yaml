@@ -850,6 +850,7 @@ paths:
         - Requires administrator privileges.
         - Any transition to COMPLETED requires exactly four registered players.
         - OPEN can transition to COMPLETED.
+        - OPEN can transition to CANCELLED.
         - COMPLETED can transition to CONFIRMED or CANCELLED.
         - CONFIRMED can transition to CANCELLED or COMPLETED; transition to COMPLETED allows a subsequent player removal.
         - CANCELLED can transition to COMPLETED to allow a subsequent player removal.
