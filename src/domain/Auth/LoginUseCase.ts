@@ -9,7 +9,8 @@ import {
 	ACCESS_TOKEN_EXPIRES_IN,
 	REFRESH_TOKEN_EXPIRES_IN_SECONDS,
 } from "./Constants";
-import { LoginResult } from "./dto/LoginResultDto";
+import { LoginResultDto } from "./dto/LoginResultDto";
+import { LoginInputDto } from "./dto/LoginInputDto";
 
 function isValidEmail(email: string): boolean {
 	const normalizedEmail = email.trim();
@@ -32,10 +33,7 @@ export class LoginUseCase {
 		private readonly signingKey: Uint8Array,
 	) {}
 
-	async execute(input: {
-		email: string;
-		password: string;
-	}): Promise<LoginResult> {
+	async execute(input: LoginInputDto): Promise<LoginResultDto> {
 		if (
 			typeof input.email !== "string" ||
 			!isValidEmail(input.email) ||

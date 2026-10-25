@@ -1,4 +1,5 @@
 import express, { Request, Response, Application } from "express";
+import { readFile } from "node:fs/promises";
 import { resolveSigningKey } from "./domain/Auth/Util/signingKey";
 import { InMemoryAuthRepository } from "./infrastructure/persistence/Auth/InMemoryAuthRepository";
 import { PrismaAuthRepository } from "./infrastructure/persistence/Auth/PrismaAuthRepository";
@@ -17,6 +18,7 @@ import { InMemoryPlayerRepository } from "./infrastructure/persistence/Player/In
 
 export function createApp(useDatabase: boolean = false): Application {
 	const app = express();
+	const openApiDocumentPath = new URL("../satispadel.openapi.yaml", import.meta.url);
 
 	app.use(express.json());
 
@@ -37,6 +39,11 @@ export function createApp(useDatabase: boolean = false): Application {
 
 	app.get("/", (_req: Request, res: Response) => {
 		res.send("Hello World");
+	});
+
+	app.get("/api/doc", async (_req: Request, res: Response) => {
+		const document = await readFile(openApiDocumentPath, "utf8");
+		res.set("Content-Type", "application/yaml; charset=utf-8").send(document);
 	});
 
 	app.use("/auth", createAuthRouter(authRepository, playerRepository, signingKey, authenticate));
