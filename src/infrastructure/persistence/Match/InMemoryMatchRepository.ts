@@ -14,6 +14,10 @@ export class InMemoryMatchRepository implements IMatchRepository {
 		return match;
 	}
 
+	async list(): Promise<Match[]> {
+		return [...this.matches];
+	}
+
 	async findByDateTime(dateTime: string): Promise<Match[]> {
 		return this.matches.filter((match) => match.dateTime === dateTime);
 	}

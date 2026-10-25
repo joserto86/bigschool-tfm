@@ -4,7 +4,7 @@ import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchR
 
 export interface CreateMatchInput {
 	dateTime: string;
-	playerId: string;
+	playerId?: string;
 }
 
 export class InvalidMatchDateTimeError extends Error {
@@ -24,8 +24,11 @@ export class CreateMatchUseCase {
 			throw new InvalidMatchDateTimeError();
 		}
 
-		if (new Date(dateTime) <= new Date()) {
-			console.log("Invalid dateTime:", dateTime, "Current time:", new Date().toISOString());
+		const parsedDateTime = new Date(dateTime);
+		if (
+			Number.isNaN(parsedDateTime.getTime()) ||
+			parsedDateTime.getTime() <= Date.now()
+		) {
 			throw new InvalidMatchDateTimeError();
 		}
 
@@ -33,13 +36,9 @@ export class CreateMatchUseCase {
 			id: randomUUID(),
 			dateTime,
 			status: "OPEN",
-			players: [
-				{
-					playerId,
-					slot: 1,
-					confirmation: null,
-				},
-			],
+			players: playerId
+				? [{ playerId, slot: 1, confirmation: null }]
+				: [],
 			createdAt: new Date(),
 			updatedAt: null,
 		};

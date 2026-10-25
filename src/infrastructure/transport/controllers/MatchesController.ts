@@ -4,13 +4,10 @@ import {
 	InvalidMatchDateTimeError,
 } from "../../../domain/Match/CreateMatchUseCase";
 import {
-	GetMatchesByDateTimeUseCase,
-	MissingDateTimeQueryError,
-} from "../../../domain/Match/GetMatchesByDateTimeUseCase";
-import {
-	GetMatchByIdUseCase,
+	GetMatchesUseCase,
 	MatchNotFoundError,
-} from "../../../domain/Match/GetMatchByIdUseCase";
+	MissingDateTimeQueryError,
+} from "../../../domain/Match/GetMatchesUseCase";
 import {
 	JoinMatchUseCase,
 	MatchFullError,
@@ -30,8 +27,7 @@ import {
 export class MatchesController {
 	constructor(
 		private readonly createMatchUseCase: CreateMatchUseCase,
-		private readonly getMatchesByDateTimeUseCase: GetMatchesByDateTimeUseCase,
-		private readonly getMatchByIdUseCase: GetMatchByIdUseCase,
+		private readonly getMatchesUseCase: GetMatchesUseCase,
 		private readonly joinMatchUseCase: JoinMatchUseCase,
 		private readonly leaveMatchUseCase: LeaveMatchUseCase,
 		private readonly confirmMatchUseCase: ConfirmMatchUseCase,
@@ -58,8 +54,8 @@ export class MatchesController {
 
 	getMatches = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const items = await this.getMatchesByDateTimeUseCase.execute({
-				dateTime: req.query.dateTime,
+			const items = await this.getMatchesUseCase.getMatchesByDateTime({
+				dateTime: req.query.dateTime as string,
 			});
 			res.status(200).json({ items });
 		} catch (error) {
@@ -76,9 +72,7 @@ export class MatchesController {
 
 	getMatchById = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const match = await this.getMatchByIdUseCase.execute({
-				matchId: req.params.matchId as string,
-			});
+			const match = await this.getMatchesUseCase.getMatch(req.params.matchId as string);
 			res.status(200).json(match);
 		} catch (error) {
 			if (error instanceof MatchNotFoundError) {
