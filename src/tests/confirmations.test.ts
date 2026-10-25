@@ -118,7 +118,7 @@ describe("Players API", () => {
 			const created = await request(app)
 				.post("/matches")
 				.set("Authorization", authorization)
-				.send({ dateTime: "2026-10-20T18:00:00+02:00" });
+				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
 			const response = await request(app)
 				.post(`/matches/${created.body.id}/confirmation`)

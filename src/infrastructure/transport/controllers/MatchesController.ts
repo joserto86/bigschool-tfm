@@ -3,10 +3,6 @@ import {
 	CreateMatchUseCase,
 	InvalidMatchDateTimeError,
 } from "../../../domain/Match/CreateMatchUseCase";
-// import {
-// 	GetMatchesByDateTimeUseCase,
-// 	MissingDateTimeQueryError,
-// } from "../../../domain/Match/GetMatchesByDateTimeUseCase";
 import {
 	GetMatchesUseCase,
 	MatchNotFoundError,
@@ -31,7 +27,6 @@ import {
 export class MatchesController {
 	constructor(
 		private readonly createMatchUseCase: CreateMatchUseCase,
-		// private readonly getMatchesByDateTimeUseCase: GetMatchesByDateTimeUseCase,
 		private readonly getMatchesUseCase: GetMatchesUseCase,
 		private readonly joinMatchUseCase: JoinMatchUseCase,
 		private readonly leaveMatchUseCase: LeaveMatchUseCase,

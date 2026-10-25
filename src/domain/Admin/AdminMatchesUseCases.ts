@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { CreateMatchUseCase } from "../Match/CreateMatchUseCase";
-import {
-	GetMatchesUseCase,
-	MatchNotFoundError,
-} from "../Match/GetMatchesUseCase";
+import { GetMatchesUseCase } from "../Match/GetMatchesUseCase";
 import { MatchNotOpenError } from "../Match/LeaveMatchUseCase";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";

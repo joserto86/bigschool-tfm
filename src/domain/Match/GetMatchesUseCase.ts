@@ -13,7 +13,7 @@ export class MatchNotFoundError extends Error {
 }
 
 export interface GetMatchesByDateTimeInput {
-	dateTime: Date;
+	dateTime: string;
 }
 
 export class MissingDateTimeQueryError extends Error {
