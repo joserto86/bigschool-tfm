@@ -1,5 +1,6 @@
 import express, { Request, Response, Application } from "express";
 import { readFile } from "node:fs/promises";
+import swaggerUi from "swagger-ui-express";
 import { resolveSigningKey } from "./domain/Auth/Util/signingKey";
 import { InMemoryAuthRepository } from "./infrastructure/persistence/Auth/InMemoryAuthRepository";
 import { PrismaAuthRepository } from "./infrastructure/persistence/Auth/PrismaAuthRepository";
@@ -41,10 +42,15 @@ export function createApp(useDatabase: boolean = false): Application {
 		res.send("Hello World");
 	});
 
-	app.get("/api/doc", async (_req: Request, res: Response) => {
+	app.get("/api/doc/openapi.yaml", async (_req: Request, res: Response) => {
 		const document = await readFile(openApiDocumentPath, "utf8");
 		res.set("Content-Type", "application/yaml; charset=utf-8").send(document);
 	});
+	app.use(
+		"/api/doc",
+		swaggerUi.serve,
+		swaggerUi.setup(null, { swaggerUrl: "/api/doc/openapi.yaml" }),
+	);
 
 	app.use("/auth", createAuthRouter(authRepository, playerRepository, signingKey, authenticate));
 	app.use("/admin/players", authenticate, requireAdmin, createAdminPlayersRouter(playerRepository));
