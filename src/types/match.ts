@@ -15,5 +15,5 @@ export interface Match {
 	players: MatchPlayer[];
 	place?: string | null;
 	createdAt: Date;
-	updatedAt: Date | null;
+	updatedAt?: Date | null;
 }

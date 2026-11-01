@@ -18,7 +18,7 @@ describe("Own player API", () => {
 	});
 
 	async function getAccessToken(): Promise<string> {
-		const response = await request(app).post("/auth/login").send({
+		const response = await request(app).post("/api/auth/login").send({
 			email: "player@example.com",
 			password: "correct-password",
 		});
@@ -27,9 +27,9 @@ describe("Own player API", () => {
 		return response.body.accessToken as string;
 	}
 
-	describe("GET /players/me", () => {
+	describe("GET /api/players/me", () => {
 		it("rejects a request without an access token", async () => {
-			const response = await request(app).get("/players/me");
+			const response = await request(app).get("/api/players/me");
 
 			expect(response.status).toBe(401);
 			expect(response.body).toMatchObject({
@@ -40,7 +40,7 @@ describe("Own player API", () => {
 
 		it("rejects a request with an invalid access token", async () => {
 			const response = await request(app)
-				.get("/players/me")
+				.get("/api/players/me")
 				.set("Authorization", "Bearer invalid-token");
 
 			expect(response.status).toBe(401);
@@ -53,7 +53,7 @@ describe("Own player API", () => {
 		it("returns the authenticated player's information without credentials", async () => {
 			const accessToken = await getAccessToken();
 			const response = await request(app)
-				.get("/players/me")
+				.get("/api/players/me")
 				.set("Authorization", `Bearer ${accessToken}`);
 
 			expect(response.status).toBe(200);
@@ -73,9 +73,9 @@ describe("Own player API", () => {
 		});
 	});
 
-	describe("PATCH /players/me", () => {
+	describe("PATCH /api/players/me", () => {
 		it("rejects a request without an access token", async () => {
-			const response = await request(app).patch("/players/me").send({
+			const response = await request(app).patch("/api/players/me").send({
 				name: "Updated Player",
 			});
 
@@ -88,7 +88,7 @@ describe("Own player API", () => {
 
 		it("rejects a request with an invalid access token", async () => {
 			const response = await request(app)
-				.patch("/players/me")
+				.patch("/api/players/me")
 				.set("Authorization", "Bearer invalid-token")
 				.send({ name: "Updated Player" });
 
@@ -109,7 +109,7 @@ describe("Own player API", () => {
 			};
 
 			const response = await request(app)
-				.patch("/players/me")
+				.patch("/api/players/me")
 				.set("Authorization", authorization)
 				.send(update);
 
@@ -123,7 +123,7 @@ describe("Own player API", () => {
 			expect(response.body).not.toHaveProperty("passwordHash");
 
 			const profile = await request(app)
-				.get("/players/me")
+				.get("/api/players/me")
 				.set("Authorization", authorization);
 			expect(profile.status).toBe(200);
 			expect(profile.body).toMatchObject(update);
@@ -135,7 +135,7 @@ describe("Own player API", () => {
 		])("rejects attempts to update %s", async (_field, protectedField) => {
 			const accessToken = await getAccessToken();
 			const response = await request(app)
-				.patch("/players/me")
+				.patch("/api/players/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({ name: "Updated Player", ...protectedField });
 
@@ -149,7 +149,7 @@ describe("Own player API", () => {
 		it("rejects an empty update", async () => {
 			const accessToken = await getAccessToken();
 			const response = await request(app)
-				.patch("/players/me")
+				.patch("/api/players/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({});
 

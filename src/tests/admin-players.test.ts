@@ -37,7 +37,7 @@ describe("Admin Players API", () => {
 		overrides: Record<string, unknown> = {},
 	) {
 		return request(app)
-			.post("/admin/players")
+			.post("/api/admin/players")
 			.set("Authorization", adminAuthorization)
 			.send({
 				name: "Alex Jugador",
@@ -67,10 +67,10 @@ describe("Admin Players API", () => {
 
 	describe("administrative access", () => {
 		it("requires authentication and administrator privileges", async () => {
-			const unauthenticated = await request(app).get("/admin/players");
+			const unauthenticated = await request(app).get("/api/admin/players");
 			const nonAdminToken = await createAccessToken(false);
 			const nonAdmin = await request(app)
-				.get("/admin/players")
+				.get("/api/admin/players")
 				.set("Authorization", `Bearer ${nonAdminToken}`);
 
 			expect(unauthenticated.status).toBe(401);
@@ -86,12 +86,12 @@ describe("Admin Players API", () => {
 		});
 
 		it.each([
-			["GET", "/admin/players"],
-			["POST", "/admin/players"],
-			["GET", `/admin/players/${PLAYER_ID}`],
-			["PATCH", `/admin/players/${PLAYER_ID}`],
-			["DELETE", `/admin/players/${PLAYER_ID}`],
-			["PATCH", `/admin/players/${PLAYER_ID}/status`],
+			["GET", "/api/admin/players"],
+			["POST", "/api/admin/players"],
+			["GET", `/api/admin/players/${PLAYER_ID}`],
+			["PATCH", `/api/admin/players/${PLAYER_ID}`],
+			["DELETE", `/api/admin/players/${PLAYER_ID}`],
+			["PATCH", `/api/admin/players/${PLAYER_ID}/status`],
 		] as const)("forbids non-admin access to %s %s", async (method, path) => {
 			const token = await createAccessToken(false);
 			const requestBuilder = requestFor(method, path).set(
@@ -105,7 +105,7 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("POST /admin/players", () => {
+	describe("POST /api/admin/players", () => {
 		it("creates a normalized player without exposing password data", async () => {
 			const response = await createPlayer({
 				name: " Alex Jugador ",
@@ -129,7 +129,7 @@ describe("Admin Players API", () => {
 			expect(response.body).not.toHaveProperty("password");
 			expect(response.body).not.toHaveProperty("passwordHash");
 
-			const login = await request(app).post("/auth/login").send({
+			const login = await request(app).post("/api/auth/login").send({
 				email: "alex@example.com",
 				password: "secure-password",
 			});
@@ -149,11 +149,11 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("GET /admin/players", () => {
+	describe("GET /api/admin/players", () => {
 		it("lists players without exposing password hashes", async () => {
 			const created = await createPlayer();
 			const response = await request(app)
-				.get("/admin/players")
+				.get("/api/admin/players")
 				.set("Authorization", adminAuthorization);
 
 			expect(created.status).toBe(201);
@@ -173,14 +173,14 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("GET /admin/players/{playerId}", () => {
+	describe("GET /api/admin/players/{playerId}", () => {
 		it("returns the requested player and reports unknown players", async () => {
 			const created = await createPlayer();
 			const found = await request(app)
-				.get(`/admin/players/${created.body.id}`)
+				.get(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization);
 			const missing = await request(app)
-				.get(`/admin/players/${PLAYER_ID}`)
+				.get(`/api/admin/players/${PLAYER_ID}`)
 				.set("Authorization", adminAuthorization);
 
 			expect(found.status).toBe(200);
@@ -194,11 +194,11 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("PATCH /admin/players/{playerId}", () => {
+	describe("PATCH /api/admin/players/{playerId}", () => {
 		it("updates profile and administrator role fields", async () => {
 			const created = await createPlayer();
 			const response = await request(app)
-				.patch(`/admin/players/${created.body.id}`)
+				.patch(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization)
 				.send({
 					name: "Alex Actualizado",
@@ -218,12 +218,12 @@ describe("Admin Players API", () => {
 			expect(response.body).not.toHaveProperty("passwordHash");
 			expect(response.body).not.toHaveProperty("password");
 
-			const login = await request(app).post("/auth/login").send({
+			const login = await request(app).post("/api/auth/login").send({
 				email: "alex.updated@example.com",
 				password: "secure-password",
 			});
 			const adminList = await request(app)
-				.get("/admin/players")
+				.get("/api/admin/players")
 				.set("Authorization", `Bearer ${login.body.accessToken}`);
 			expect(login.status).toBe(200);
 			expect(adminList.status).toBe(200);
@@ -232,15 +232,15 @@ describe("Admin Players API", () => {
 		it("rejects empty, unknown, and malformed profile updates", async () => {
 			const created = await createPlayer();
 			const empty = await request(app)
-				.patch(`/admin/players/${created.body.id}`)
+				.patch(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization)
 				.send({});
 			const unknown = await request(app)
-				.patch(`/admin/players/${created.body.id}`)
+				.patch(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization)
 				.send({ password: "password" });
 			const invalid = await request(app)
-				.patch(`/admin/players/${created.body.id}`)
+				.patch(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization)
 				.send({ email: "not-an-email" });
 
@@ -250,15 +250,15 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("PATCH /admin/players/{playerId}/status", () => {
+	describe("PATCH /api/admin/players/{playerId}/status", () => {
 		it("changes active status and can return an inactive player", async () => {
 			const created = await createPlayer();
 			const response = await request(app)
-				.patch(`/admin/players/${created.body.id}/status`)
+				.patch(`/api/admin/players/${created.body.id}/status`)
 				.set("Authorization", adminAuthorization)
 				.send({ active: false });
 			const found = await request(app)
-				.get(`/admin/players/${created.body.id}`)
+				.get(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization);
 
 			expect(response.status).toBe(200);
@@ -269,7 +269,7 @@ describe("Admin Players API", () => {
 			expect(found.status).toBe(200);
 			expect(found.body.active).toBe(false);
 
-			const login = await request(app).post("/auth/login").send({
+			const login = await request(app).post("/api/auth/login").send({
 				email: "alex@example.com",
 				password: "secure-password",
 			});
@@ -278,14 +278,14 @@ describe("Admin Players API", () => {
 		});
 	});
 
-	describe("DELETE /admin/players/{playerId}", () => {
+	describe("DELETE /api/admin/players/{playerId}", () => {
 		it("deletes a player and reports an unknown player", async () => {
 			const created = await createPlayer();
 			const deleted = await request(app)
-				.delete(`/admin/players/${created.body.id}`)
+				.delete(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization);
 			const missing = await request(app)
-				.delete(`/admin/players/${created.body.id}`)
+				.delete(`/api/admin/players/${created.body.id}`)
 				.set("Authorization", adminAuthorization);
 
 			expect(deleted.status).toBe(204);

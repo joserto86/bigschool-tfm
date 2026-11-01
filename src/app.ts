@@ -17,29 +17,47 @@ import { requireAdmin } from "./middleware/requireAdmin";
 import { PrismaPlayerRepository } from "./infrastructure/persistence/Player/PrismaPlayerRepository";
 import { InMemoryPlayerRepository } from "./infrastructure/persistence/Player/InMemoryPlayerRepository";
 
+
 export function createApp(useDatabase: boolean = false): Application {
 	const app = express();
-	const openApiDocumentPath = new URL("../satispadel.openapi.yaml", import.meta.url);
+	const openApiDocumentPath = new URL(
+		"../satispadel.openapi.yaml",
+		import.meta.url,
+	);
 
 	app.use(express.json());
 
 	const authRepository = useDatabase
 		? new PrismaAuthRepository(prisma)
 		: new InMemoryAuthRepository();
-	
+
 	const playerRepository = useDatabase
 		? new PrismaPlayerRepository(prisma)
 		: new InMemoryPlayerRepository();
-	
+
 	const matchRepository = useDatabase
 		? new PrismaMatchRepository(prisma)
 		: new InMemoryMatchRepository();
-	
+
 	const signingKey = resolveSigningKey();
 	const authenticate = createAuthenticateMiddleware(signingKey);
 
 	app.get("/", (_req: Request, res: Response) => {
-		res.send("Hello World");
+		const timestamp: number = Date.now();
+		const date: Date = new Date(timestamp);
+
+		// 'es-ES' typically produces dd/mm/yyyy format
+		const formatted: string = new Intl.DateTimeFormat("es-ES", {
+			day: "2-digit",
+			month: "2-digit",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+		}).format(date);
+
+		
+		res.send("Hello from Satispadel API " + formatted);
 	});
 
 	app.get("/api/doc/openapi.yaml", async (_req: Request, res: Response) => {
@@ -52,17 +70,30 @@ export function createApp(useDatabase: boolean = false): Application {
 		swaggerUi.setup(null, { swaggerUrl: "/api/doc/openapi.yaml" }),
 	);
 
-	app.use("/auth", createAuthRouter(authRepository, playerRepository, signingKey, authenticate));
-	app.use("/admin/players", authenticate, requireAdmin, createAdminPlayersRouter(playerRepository));
 	app.use(
-		"/admin/matches",
+		"/api/auth",
+		createAuthRouter(
+			authRepository,
+			playerRepository,
+			signingKey,
+			authenticate,
+		),
+	);
+	app.use(
+		"/api/admin/players",
+		authenticate,
+		requireAdmin,
+		createAdminPlayersRouter(playerRepository),
+	);
+	app.use(
+		"/api/admin/matches",
 		authenticate,
 		requireAdmin,
 		createAdminMatchesRouter(matchRepository, playerRepository),
 	);
-	app.use("/players", authenticate, createPlayersRouter(playerRepository));
+	app.use("/api/players", authenticate, createPlayersRouter(playerRepository));
 	app.use(
-		"/matches",
+		"/api/matches",
 		authenticate,
 		createMatchesRouter(matchRepository, playerRepository),
 	);

@@ -15,14 +15,14 @@ describe("Authentication", () => {
 		vi.unstubAllEnvs();
 	});
 		
-	describe("POST /auth/login", () => {
+	describe("POST /api/auth/login", () => {
 		it("returns an access token and refresh token for valid credentials", async () => {
 			const jwtSecret = "test-secret-that-is-at-least-32-bytes-long";
 			vi.stubEnv("JWT_SECRET", jwtSecret);
 			const loginApp = createApp();
 
 			const response = await request(loginApp)
-				.post("/auth/login")
+				.post("/api/auth/login")
 				.send({ email: "player@example.com", password: "correct-password" });
 
 			expect(response.status).toBe(200);
@@ -47,7 +47,7 @@ describe("Authentication", () => {
 		});
 
 		it("rejects a request without email and password", async () => {
-			const response = await request(app).post("/auth/login").send({});
+			const response = await request(app).post("/api/auth/login").send({});
 
 			expect(response.status).toBe(400);
 			expect(response.body).toMatchObject({
@@ -58,7 +58,7 @@ describe("Authentication", () => {
 
 		it("rejects invalid credentials with a generic authentication error", async () => {
 			const response = await request(app)
-				.post("/auth/login")
+				.post("/api/auth/login")
 				.send({ email: "unknown@example.com", password: "invalid-password" });
 
 			expect(response.status).toBe(401);
@@ -69,9 +69,9 @@ describe("Authentication", () => {
 		});
 	});
 
-	describe("POST /auth/password", () => {
+	describe("POST /api/auth/password", () => {
 		it("requires an authenticated user", async () => {
-			const response = await request(app).post("/auth/password").send({
+			const response = await request(app).post("/api/auth/password").send({
 				currentPassword: "current-password",
 				newPassword: "new-password",
 			});
@@ -85,7 +85,7 @@ describe("Authentication", () => {
 
 		it("rejects an invalid access token", async () => {
 			const response = await request(app)
-				.post("/auth/password")
+				.post("/api/auth/password")
 				.set("Authorization", "Bearer invalid-access-token")
 				.send({
 					currentPassword: "current-password",
@@ -100,9 +100,9 @@ describe("Authentication", () => {
 		});
 	});
 
-	describe("POST /auth/refresh", () => {
+	describe("POST /api/auth/refresh", () => {
 		it("rejects a request without a refresh token", async () => {
-			const response = await request(app).post("/auth/refresh").send({});
+			const response = await request(app).post("/api/auth/refresh").send({});
 
 			expect(response.status).toBe(401);
 			expect(response.body).toMatchObject({
@@ -113,7 +113,7 @@ describe("Authentication", () => {
 
 		it("rejects an invalid refresh token", async () => {
 			const response = await request(app)
-				.post("/auth/refresh")
+				.post("/api/auth/refresh")
 				.send({ refreshToken: "invalid-refresh-token" });
 
 			expect(response.status).toBe(401);

@@ -37,27 +37,27 @@ describe("Players API", () => {
 
 	async function createCompletedMatch() {
 		const created = await request(app)
-			.post("/matches")
+			.post("/api/matches")
 			.set("Authorization", authorization)
 			.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 		const matchId = created.body.id as string;
 
 		for (const playerId of ["player-2", "player-3", "player-4"]) {
 			await request(app)
-				.post(`/matches/${matchId}/players`)
+				.post(`/api/matches/${matchId}/players`)
 				.set("Authorization", await createAuthorization(playerId));
 		}
 
 		return matchId;
 	}
 
-	describe("POST /matches/{matchId}/confirmation", () => {
+	describe("POST /api/matches/{matchId}/confirmation", () => {
 		it("rejects a request without a valid access token", async () => {
 			const missing = await request(app)
-				.post("/matches/any-match/confirmation")
+				.post("/api/matches/any-match/confirmation")
 				.send({ decision: "CONFIRMED" });
 			const invalid = await request(app)
-				.post("/matches/any-match/confirmation")
+				.post("/api/matches/any-match/confirmation")
 				.set("Authorization", "Bearer invalid-token")
 				.send({ decision: "CONFIRMED" });
 
@@ -70,7 +70,7 @@ describe("Players API", () => {
 			const matchId = await createCompletedMatch();
 
 			const response = await request(app)
-				.post(`/matches/${matchId}/confirmation`)
+				.post(`/api/matches/${matchId}/confirmation`)
 				.set("Authorization", authorization)
 				.send({ decision: "CONFIRMED" });
 
@@ -83,7 +83,7 @@ describe("Players API", () => {
 			});
 
 			const match = await request(app)
-				.get(`/matches/${matchId}`)
+				.get(`/api/matches/${matchId}`)
 				.set("Authorization", authorization);
 
 			expect(match.status).toBe(200);
@@ -96,7 +96,7 @@ describe("Players API", () => {
 			let response;
 			for (const playerId of ["player-1", "player-2", "player-3", "player-4"]) {
 				response = await request(app)
-					.post(`/matches/${matchId}/confirmation`)
+					.post(`/api/matches/${matchId}/confirmation`)
 					.set("Authorization", await createAuthorization(playerId))
 					.send({ decision: "CONFIRMED" });
 			}
@@ -108,12 +108,12 @@ describe("Players API", () => {
 		it("transitions the match to CANCELLED as soon as one player declines", async () => {
 			const matchId = await createCompletedMatch();
 			await request(app)
-				.post(`/matches/${matchId}/confirmation`)
+				.post(`/api/matches/${matchId}/confirmation`)
 				.set("Authorization", await createAuthorization("player-1"))
 				.send({ decision: "CONFIRMED" });
 
 			const response = await request(app)
-				.post(`/matches/${matchId}/confirmation`)
+				.post(`/api/matches/${matchId}/confirmation`)
 				.set("Authorization", await createAuthorization("player-2"))
 				.send({ decision: "DECLINED" });
 
@@ -123,12 +123,12 @@ describe("Players API", () => {
 
 		it("rejects confirming a match that is not COMPLETED", async () => {
 			const created = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", authorization)
 				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
 			const response = await request(app)
-				.post(`/matches/${created.body.id}/confirmation`)
+				.post(`/api/matches/${created.body.id}/confirmation`)
 				.set("Authorization", authorization)
 				.send({ decision: "CONFIRMED" });
 
@@ -139,7 +139,7 @@ describe("Players API", () => {
 			const matchId = await createCompletedMatch();
 
 			const response = await request(app)
-				.post(`/matches/${matchId}/confirmation`)
+				.post(`/api/matches/${matchId}/confirmation`)
 				.set("Authorization", await createAuthorization("player-99"))
 				.send({ decision: "CONFIRMED" });
 
@@ -148,7 +148,7 @@ describe("Players API", () => {
 
 		it("returns 404 when the match does not exist", async () => {
 			const response = await request(app)
-				.post("/matches/does-not-exist/confirmation")
+				.post("/api/matches/does-not-exist/confirmation")
 				.set("Authorization", authorization)
 				.send({ decision: "CONFIRMED" });
 

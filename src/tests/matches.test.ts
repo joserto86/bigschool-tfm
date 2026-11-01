@@ -35,13 +35,13 @@ describe("Matches API", () => {
 		vi.unstubAllEnvs();
 	});
 
-	describe("POST /matches", () => {
+	describe("POST /api/matches", () => {
 		it("rejects a request without a valid access token", async () => {
 			const missing = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 			const invalid = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", "Bearer invalid-token")
 				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
@@ -54,7 +54,7 @@ describe("Matches API", () => {
 			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
 
 			const response = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", authorization)
 				.send({ dateTime });
 
@@ -79,7 +79,7 @@ describe("Matches API", () => {
 
 		it("rejects a request with a past dateTime", async () => {
 			const response = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", authorization)
 				.send({ dateTime: new Date(Date.now() - 3600 * 1000).toISOString() });
 
@@ -90,9 +90,9 @@ describe("Matches API", () => {
 		it("allows creating multiple matches with the same dateTime", async () => {
 			const payload = { dateTime: new Date(Date.now() + 3600 * 1000).toISOString() };
 
-			const first = await request(app).post("/matches")
+			const first = await request(app).post("/api/matches")
 				.set("Authorization", await createAuthorization("player-1")).send(payload);
-			const second = await request(app).post("/matches")
+			const second = await request(app).post("/api/matches")
 				.set("Authorization", await createAuthorization("player-2")).send(payload);
 
 			expect(first.status).toBe(201);
@@ -103,9 +103,9 @@ describe("Matches API", () => {
 		it("rejects creating another match at the same dateTime for the authenticated player", async () => {
 			const payload = { dateTime: new Date(Date.now() + 3600 * 1000).toISOString() };
 
-			const first = await request(app).post("/matches")
+			const first = await request(app).post("/api/matches")
 				.set("Authorization", authorization).send(payload);
-			const second = await request(app).post("/matches")
+			const second = await request(app).post("/api/matches")
 				.set("Authorization", authorization).send(payload);
 
 			expect(first.status).toBe(201);
@@ -117,7 +117,7 @@ describe("Matches API", () => {
 		});
 
 		it("rejects a request without dateTime", async () => {
-			const response = await request(app).post("/matches")
+			const response = await request(app).post("/api/matches")
 				.set("Authorization", authorization).send({});
 
 			expect(response.status).toBe(400);
@@ -126,14 +126,14 @@ describe("Matches API", () => {
 		});
 	});
 
-	describe("GET /matches", () => {
+	describe("GET /api/matches", () => {
 		it("returns matches filtered by dateTime", async () => {
 			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
-			await request(app).post("/matches")
+			await request(app).post("/api/matches")
 				.set("Authorization", authorization).send({ dateTime });
 
 			const response = await request(app)
-				.get("/matches")
+				.get("/api/matches")
 				.set("Authorization", authorization)
 				.query({ dateTime });
 
@@ -147,7 +147,7 @@ describe("Matches API", () => {
 
 		it("returns an empty list when no match matches the dateTime", async () => {
 			const response = await request(app)
-				.get("/matches")
+				.get("/api/matches")
 				.set("Authorization", authorization)
 				.query({ dateTime: "2030-01-01T00:00:00+01:00" });
 
@@ -156,21 +156,21 @@ describe("Matches API", () => {
 		});
 
 		it("requires the dateTime query parameter", async () => {
-			const response = await request(app).get("/matches")
+			const response = await request(app).get("/api/matches")
 				.set("Authorization", authorization);
 
 			expect(response.status).toBe(400);
 		});
 	});
 
-	describe("GET /matches/{matchId}", () => {
+	describe("GET /api/matches/{matchId}", () => {
 		it("returns the match when it exists", async () => {
 			const created = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", authorization)
 				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
 
-			const response = await request(app).get(`/matches/${created.body.id}`)
+			const response = await request(app).get(`/api/matches/${created.body.id}`)
 				.set("Authorization", authorization);
 
 			expect(response.status).toBe(200);
@@ -191,7 +191,7 @@ describe("Matches API", () => {
 		});
 
 		it("returns 404 when the match does not exist", async () => {
-			const response = await request(app).get("/matches/does-not-exist")
+			const response = await request(app).get("/api/matches/does-not-exist")
 				.set("Authorization", authorization);
 
 			expect(response.status).toBe(404);
@@ -199,23 +199,23 @@ describe("Matches API", () => {
 		});
 	});
 
-	describe("POST /matches/{matchId}/players", () => {
+	describe("POST /api/matches/{matchId}/players", () => {
 		it("rejects registering a player in another match at the same dateTime", async () => {
 			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
 			const firstMatch = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", await createAuthorization("player-1"))
 				.send({ dateTime });
 			const joinFirstMatch = await request(app)
-				.post(`/matches/${firstMatch.body.id}/players`)
+				.post(`/api/matches/${firstMatch.body.id}/players`)
 				.set("Authorization", await createAuthorization("player-2"));
 			const secondMatch = await request(app)
-				.post("/matches")
+				.post("/api/matches")
 				.set("Authorization", await createAuthorization("player-3"))
 				.send({ dateTime });
 
 			const joinSecondMatch = await request(app)
-				.post(`/matches/${secondMatch.body.id}/players`)
+				.post(`/api/matches/${secondMatch.body.id}/players`)
 				.set("Authorization", await createAuthorization("player-2"));
 
 			expect(firstMatch.status).toBe(201);

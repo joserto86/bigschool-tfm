@@ -54,7 +54,7 @@ describe("Admin Matches API", () => {
 
 	async function createAdminMatch() {
 		const response = await request(app)
-			.post("/admin/matches")
+			.post("/api/admin/matches")
 			.set("Authorization", adminAuthorization)
 			.send({ dateTime: MATCH_DATE_TIME() });
 
@@ -70,7 +70,7 @@ describe("Admin Matches API", () => {
 	async function createPlayer() {
 		playerCounter += 1;
 		const response = await request(app)
-			.post("/admin/players")
+			.post("/api/admin/players")
 			.set("Authorization", adminAuthorization)
 			.send({
 				name: `Player ${playerCounter}`,
@@ -87,7 +87,7 @@ describe("Admin Matches API", () => {
 	async function createCompletedMatch() {
 		const playerIds = ["test-player", "match-player-2", "match-player-3", "match-player-4"];
 		const created = await request(app)
-			.post("/matches")
+			.post("/api/matches")
 			.set("Authorization", playerAuthorization)
 			.send({ dateTime: MATCH_DATE_TIME() });
 
@@ -95,7 +95,7 @@ describe("Admin Matches API", () => {
 		for (const playerId of playerIds.slice(1)) {
 			const authorization = `Bearer ${await createAccessToken(false, playerId)}`;
 			const joined = await request(app)
-				.post(`/matches/${created.body.id}/players`)
+				.post(`/api/matches/${created.body.id}/players`)
 				.set("Authorization", authorization);
 			expect(joined.status).toBe(201);
 		}
@@ -105,20 +105,20 @@ describe("Admin Matches API", () => {
 
 	async function changeMatchStatus(matchId: string, status: MatchStatus) {
 		return request(app)
-			.patch(`/admin/matches/${matchId}/status`)
+			.patch(`/api/admin/matches/${matchId}/status`)
 			.set("Authorization", adminAuthorization)
 			.send({ status });
 	}
 
 	describe("administrative access", () => {
 		const protectedOperations: Array<[HttpMethod, string]> = [
-			["GET", "/admin/matches"],
-			["POST", "/admin/matches"],
-			["GET", "/admin/matches/match-123"],
-			["DELETE", "/admin/matches/match-123"],
-			["POST", "/admin/matches/match-123/players"],
-			["DELETE", "/admin/matches/match-123/players/player-123"],
-			["PATCH", "/admin/matches/match-123/status"],
+			["GET", "/api/admin/matches"],
+			["POST", "/api/admin/matches"],
+			["GET", "/api/admin/matches/match-123"],
+			["DELETE", "/api/admin/matches/match-123"],
+			["POST", "/api/admin/matches/match-123/players"],
+			["DELETE", "/api/admin/matches/match-123/players/player-123"],
+			["PATCH", "/api/admin/matches/match-123/status"],
 		];
 
 		it.each(protectedOperations)(
@@ -151,11 +151,11 @@ describe("Admin Matches API", () => {
 		);
 	});
 
-	describe("POST /admin/matches", () => {
+	describe("POST /api/admin/matches", () => {
 		it("creates an OPEN match without registered players", async () => {
 			const dateTime = MATCH_DATE_TIME();
 			const response = await request(app)
-				.post("/admin/matches")
+				.post("/api/admin/matches")
 				.set("Authorization", adminAuthorization)
 				.send({ dateTime });
 
@@ -170,11 +170,11 @@ describe("Admin Matches API", () => {
 
 		it("rejects a missing or invalid dateTime", async () => {
 			const missing = await request(app)
-				.post("/admin/matches")
+				.post("/api/admin/matches")
 				.set("Authorization", adminAuthorization)
 				.send({});
 			const invalid = await request(app)
-				.post("/admin/matches")
+				.post("/api/admin/matches")
 				.set("Authorization", adminAuthorization)
 				.send({ dateTime: "not-a-date" });
 
@@ -191,13 +191,13 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("GET /admin/matches", () => {
+	describe("GET /api/admin/matches", () => {
 		it("returns all matches in the documented items response", async () => {
 			const first = await createAdminMatch();
 			const second = await createAdminMatch();
 
 			const response = await request(app)
-				.get("/admin/matches")
+				.get("/api/admin/matches")
 				.set("Authorization", adminAuthorization);
 
 			expect(response.status).toBe(200);
@@ -210,14 +210,14 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("GET /admin/matches/{matchId}", () => {
+	describe("GET /api/admin/matches/{matchId}", () => {
 		it("returns the requested match and reports an unknown match", async () => {
 			const match = await createAdminMatch();
 			const found = await request(app)
-				.get(`/admin/matches/${match.id}`)
+				.get(`/api/admin/matches/${match.id}`)
 				.set("Authorization", adminAuthorization);
 			const missing = await request(app)
-				.get("/admin/matches/unknown-match")
+				.get("/api/admin/matches/unknown-match")
 				.set("Authorization", adminAuthorization);
 
 			expect(found.status).toBe(200);
@@ -235,13 +235,13 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("POST /admin/matches/{matchId}/players", () => {
+	describe("POST /api/admin/matches/{matchId}/players", () => {
 		it("registers an existing player in the next slot", async () => {
 			const match = await createAdminMatch();
 			const playerId = await createPlayer();
 
 			const response = await request(app)
-				.post(`/admin/matches/${match.id}/players`)
+				.post(`/api/admin/matches/${match.id}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId });
 
@@ -262,7 +262,7 @@ describe("Admin Matches API", () => {
 
 			for (const playerId of playerIds) {
 				response = await request(app)
-					.post(`/admin/matches/${match.id}/players`)
+					.post(`/api/admin/matches/${match.id}/players`)
 					.set("Authorization", adminAuthorization)
 					.send({ playerId });
 			}
@@ -276,11 +276,11 @@ describe("Admin Matches API", () => {
 			const match = await createAdminMatch();
 			const playerId = await createPlayer();
 			const first = await request(app)
-				.post(`/admin/matches/${match.id}/players`)
+				.post(`/api/admin/matches/${match.id}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId });
 			const duplicate = await request(app)
-				.post(`/admin/matches/${match.id}/players`)
+				.post(`/api/admin/matches/${match.id}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId });
 
@@ -294,7 +294,7 @@ describe("Admin Matches API", () => {
 			const completed = await createCompletedMatch();
 			const anotherPlayer = await createPlayer();
 			const notOpen = await request(app)
-				.post(`/admin/matches/${completed.matchId}/players`)
+				.post(`/api/admin/matches/${completed.matchId}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId: anotherPlayer });
 
@@ -308,11 +308,11 @@ describe("Admin Matches API", () => {
 		it("rejects invalid requests, unknown players, and full matches", async () => {
 			const match = await createAdminMatch();
 			const invalid = await request(app)
-				.post(`/admin/matches/${match.id}/players`)
+				.post(`/api/admin/matches/${match.id}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({});
 			const unknownPlayer = await request(app)
-				.post(`/admin/matches/${match.id}/players`)
+				.post(`/api/admin/matches/${match.id}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId: "unknown-player" });
 
@@ -330,7 +330,7 @@ describe("Admin Matches API", () => {
 			const completed = await createCompletedMatch();
 			const playerId = await createPlayer();
 			const full = await request(app)
-				.post(`/admin/matches/${completed.matchId}/players`)
+				.post(`/api/admin/matches/${completed.matchId}/players`)
 				.set("Authorization", adminAuthorization)
 				.send({ playerId });
 
@@ -342,11 +342,11 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("DELETE /admin/matches/{matchId}/players/{playerId}", () => {
+	describe("DELETE /api/admin/matches/{matchId}/players/{playerId}", () => {
 		it("removes a player, reopens the match, and resets remaining confirmations", async () => {
 			const { matchId, playerIds } = await createCompletedMatch();
 			const confirmed = await request(app)
-				.post(`/matches/${matchId}/confirmation`)
+				.post(`/api/matches/${matchId}/confirmation`)
 				.set(
 					"Authorization",
 					`Bearer ${await createAccessToken(false, playerIds[0])}`,
@@ -355,7 +355,7 @@ describe("Admin Matches API", () => {
 			expect(confirmed.status).toBe(200);
 
 			const response = await request(app)
-				.delete(`/admin/matches/${matchId}/players/${playerIds[1]}`)
+				.delete(`/api/admin/matches/${matchId}/players/${playerIds[1]}`)
 				.set("Authorization", adminAuthorization);
 
 			expect(response.status).toBe(200);
@@ -382,7 +382,7 @@ describe("Admin Matches API", () => {
 				expect(changed.status).toBe(200);
 
 				const response = await request(app)
-					.delete(`/admin/matches/${matchId}/players/${playerIds[0]}`)
+					.delete(`/api/admin/matches/${matchId}/players/${playerIds[0]}`)
 					.set("Authorization", adminAuthorization);
 
 				expect(response.status).toBe(409);
@@ -396,10 +396,10 @@ describe("Admin Matches API", () => {
 		it("returns 404 when the match or registration does not exist", async () => {
 			const match = await createAdminMatch();
 			const missingMatch = await request(app)
-				.delete("/admin/matches/unknown-match/players/player-123")
+				.delete("/api/admin/matches/unknown-match/players/player-123")
 				.set("Authorization", adminAuthorization);
 			const missingPlayer = await request(app)
-				.delete(`/admin/matches/${match.id}/players/unknown-player`)
+				.delete(`/api/admin/matches/${match.id}/players/unknown-player`)
 				.set("Authorization", adminAuthorization);
 
 			expect(missingMatch.status).toBe(404);
@@ -415,7 +415,7 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("PATCH /admin/matches/{matchId}/status", () => {
+	describe("PATCH /api/admin/matches/{matchId}/status", () => {
 		it("transitions an OPEN match to CANCELLED", async () => {
 			const match = await createAdminMatch();
 
@@ -468,7 +468,7 @@ describe("Admin Matches API", () => {
 		it("rejects invalid statuses and transitions", async () => {
 			const match = await createAdminMatch();
 			const invalid = await request(app)
-				.patch(`/admin/matches/${match.id}/status`)
+				.patch(`/api/admin/matches/${match.id}/status`)
 				.set("Authorization", adminAuthorization)
 				.send({ status: "INVALID" });
 			const invalidTransition = await changeMatchStatus(match.id, "CONFIRMED");
@@ -496,7 +496,7 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("DELETE /admin/matches/{matchId}", () => {
+	describe("DELETE /api/admin/matches/{matchId}", () => {
 		it.each(["OPEN", "COMPLETED", "CONFIRMED", "CANCELLED"] as const)(
 			"deletes a match in %s state",
 			async (status) => {
@@ -512,10 +512,10 @@ describe("Admin Matches API", () => {
 				}
 
 				const deleted = await request(app)
-					.delete(`/admin/matches/${matchId}`)
+					.delete(`/api/admin/matches/${matchId}`)
 					.set("Authorization", adminAuthorization);
 				const missing = await request(app)
-					.delete(`/admin/matches/${matchId}`)
+					.delete(`/api/admin/matches/${matchId}`)
 					.set("Authorization", adminAuthorization);
 
 				expect(deleted.status).toBe(204);
