@@ -6,8 +6,12 @@ import { LeaveMatchUseCase } from "../../../domain/Match/LeaveMatchUseCase";
 import { ConfirmMatchUseCase } from "../../../domain/Match/ConfirmMatchUseCase";
 import { MatchesController } from "../controllers/MatchesController";
 import { IMatchRepository } from "../../persistence/Match/IMatchRepository";
+import { IPlayerRepository } from "../../persistence/Player/IPlayerRepository";
 
-export function createMatchesRouter(matchRepository: IMatchRepository): Router {
+export function createMatchesRouter(
+	matchRepository: IMatchRepository,
+	playerRepository: IPlayerRepository,
+): Router {
 	const router = Router();
 
 	const createMatchUseCase = new CreateMatchUseCase(matchRepository);
@@ -22,6 +26,7 @@ export function createMatchesRouter(matchRepository: IMatchRepository): Router {
 		joinMatchUseCase,
 		leaveMatchUseCase,
 		confirmMatchUseCase,
+		playerRepository,
 	);
 
 	router.post("/", matchesController.createMatch);

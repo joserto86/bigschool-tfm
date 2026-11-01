@@ -8,6 +8,7 @@ info:
     Reglas de negocio principales:
     - Un partido admite un máximo de 4 jugadores.
     - Un jugador solo puede estar inscrito una vez en un mismo partido.
+    - Un jugador no puede estar inscrito en varios partidos con la misma fecha y hora.
     - Un partido puede existir en estado OPEN, COMPLETED, CONFIRMED o CANCELLED.
     - Pueden existir varios partidos con la misma fecha y hora.
     - La fecha/hora no identifica de forma única un partido; el identificador único es matchId.
@@ -73,17 +74,22 @@ paths:
                 dateTime: '2026-10-10T18:00:00+02:00'
                 status: OPEN
                 players:
-                  - playerId: player-1
+                  - id: player-1
+                    name: player-name
                     slot: 1
                     confirmation: null
+                place: null
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
       x-business-rules:
         - Player identity must be derived from the authenticated access token.
         - The authenticated player is automatically registered in the new match.
         - The match starts in OPEN status with the creator in the first slot.
+        - The authenticated player must not be registered in another match with the same dateTime.
 
     get:
       tags: [Matches]
@@ -110,22 +116,28 @@ paths:
                     dateTime: '2026-10-10T18:00:00+02:00'
                     status: OPEN
                     players: []
+                    place: null
                   - id: match-102
                     dateTime: '2026-10-10T18:00:00+02:00'
                     status: COMPLETED
                     players:
-                      - playerId: player-1
+                      - id: player-1
+                        name: player1-name
                         slot: 1
                         confirmation: PENDING
-                      - playerId: player-2
+                      - id: player-2
+                        name: player2-name
                         slot: 2
                         confirmation: PENDING
-                      - playerId: player-3
+                      - id: player-3
+                        name: player3-name
                         slot: 3
                         confirmation: PENDING
-                      - playerId: player-4
+                      - id: player-4
+                        name: player4-name
                         slot: 4
                         confirmation: PENDING
+                    place: null
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -196,6 +208,7 @@ paths:
         - Match status must be OPEN.
         - Player identity must be derived from the authenticated access token.
         - Player must not already be registered in the match.
+        - Player must not be registered in another match with the same dateTime.
         - A free slot must exist.
         - Fourth registered player transitions the match to COMPLETED.
 
@@ -759,6 +772,7 @@ paths:
         - Match and player must exist.
         - Match status must be OPEN.
         - Player must not already be registered in the match.
+        - Player must not be registered in another match with the same dateTime.
         - A free slot must exist; slot is assigned by the server.
         - Registering the fourth player transitions the match to COMPLETED.
 
@@ -970,11 +984,14 @@ components:
       enum: [CONFIRMED, DECLINED]
     MatchPlayer:
       type: object
-      required: [playerId, slot]
+      required: [id, name, slot]
       properties:
-        playerId:
+        id:
           type: string
           example: player-1
+        name:
+          type: string
+          example: player1-name
         slot:
           type: integer
           minimum: 1
@@ -1107,6 +1124,10 @@ components:
           maxItems: 4
           items:
             $ref: '#/components/schemas/MatchPlayer'
+        place:
+          type: string
+          nullable: true
+          example: place-1
     CreateMatchRequest:
       type: object
       required: [dateTime]

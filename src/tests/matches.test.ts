@@ -6,15 +6,19 @@ import { createApp } from "../app";
 
 const JWT_SECRET = "matches-test-secret-with-at-least-32-bytes";
 
-async function createAccessToken(): Promise<string> {
+async function createAccessToken(playerId = "test-player"): Promise<string> {
 	return new SignJWT({})
 		.setProtectedHeader({ alg: "HS256" })
-		.setSubject("test-player")
+		.setSubject(playerId)
 		.setIssuer("satispadel-api")
 		.setAudience("satispadel-client")
 		.setIssuedAt()
 		.setExpirationTime("15m")
 		.sign(Buffer.from(JWT_SECRET, "utf8"));
+}
+
+async function createAuthorization(playerId = "test-player"): Promise<string> {
+	return `Bearer ${await createAccessToken(playerId)}`;
 }
 
 describe("Matches API", () => {
@@ -24,7 +28,7 @@ describe("Matches API", () => {
 	beforeEach(async () => {
 		vi.stubEnv("JWT_SECRET", JWT_SECRET);
 		app = createApp();
-		authorization = `Bearer ${await createAccessToken()}`;
+		authorization = await createAuthorization();
 	});
 
 	afterEach(() => {
@@ -55,12 +59,16 @@ describe("Matches API", () => {
 				.send({ dateTime });
 
 			expect(response.status).toBe(201);
+			expect(
+				response.body.place === null || typeof response.body.place === "string",
+			).toBe(true);
 			expect(response.body).toMatchObject({
 				dateTime: dateTime,
 				status: "OPEN",
 				players: [
 					{
-						playerId: "test-player",
+						id: "test-player",
+						name: expect.any(String),
 						slot: 1,
 						confirmation: null,
 					},
@@ -83,13 +91,29 @@ describe("Matches API", () => {
 			const payload = { dateTime: new Date(Date.now() + 3600 * 1000).toISOString() };
 
 			const first = await request(app).post("/matches")
+				.set("Authorization", await createAuthorization("player-1")).send(payload);
+			const second = await request(app).post("/matches")
+				.set("Authorization", await createAuthorization("player-2")).send(payload);
+
+			expect(first.status).toBe(201);
+			expect(second.status).toBe(201);
+			expect(first.body.id).not.toBe(second.body.id);
+		});
+
+		it("rejects creating another match at the same dateTime for the authenticated player", async () => {
+			const payload = { dateTime: new Date(Date.now() + 3600 * 1000).toISOString() };
+
+			const first = await request(app).post("/matches")
 				.set("Authorization", authorization).send(payload);
 			const second = await request(app).post("/matches")
 				.set("Authorization", authorization).send(payload);
 
 			expect(first.status).toBe(201);
-			expect(second.status).toBe(201);
-			expect(first.body.id).not.toBe(second.body.id);
+			expect(second.status).toBe(409);
+			expect(second.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
 		});
 
 		it("rejects a request without dateTime", async () => {
@@ -117,6 +141,7 @@ describe("Matches API", () => {
 			expect(response.body.items.length).toBeGreaterThanOrEqual(1);
 			for (const match of response.body.items) {
 				expect(match.dateTime).toBe(dateTime);
+				expect(match.place === null || typeof match.place === "string").toBe(true);
 			}
 		});
 
@@ -149,7 +174,20 @@ describe("Matches API", () => {
 				.set("Authorization", authorization);
 
 			expect(response.status).toBe(200);
-			expect(response.body.id).toBe(created.body.id);
+			expect(
+				response.body.place === null || typeof response.body.place === "string",
+			).toBe(true);
+			expect(response.body).toMatchObject({
+				id: created.body.id,
+				players: [
+					{
+						id: "test-player",
+						name: expect.any(String),
+						slot: 1,
+						confirmation: null,
+					},
+				],
+			});
 		});
 
 		it("returns 404 when the match does not exist", async () => {
@@ -158,6 +196,36 @@ describe("Matches API", () => {
 
 			expect(response.status).toBe(404);
 			expect(response.body.code).toBe("MATCH_NOT_FOUND");
+		});
+	});
+
+	describe("POST /matches/{matchId}/players", () => {
+		it("rejects registering a player in another match at the same dateTime", async () => {
+			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
+			const firstMatch = await request(app)
+				.post("/matches")
+				.set("Authorization", await createAuthorization("player-1"))
+				.send({ dateTime });
+			const joinFirstMatch = await request(app)
+				.post(`/matches/${firstMatch.body.id}/players`)
+				.set("Authorization", await createAuthorization("player-2"));
+			const secondMatch = await request(app)
+				.post("/matches")
+				.set("Authorization", await createAuthorization("player-3"))
+				.send({ dateTime });
+
+			const joinSecondMatch = await request(app)
+				.post(`/matches/${secondMatch.body.id}/players`)
+				.set("Authorization", await createAuthorization("player-2"));
+
+			expect(firstMatch.status).toBe(201);
+			expect(joinFirstMatch.status).toBe(201);
+			expect(secondMatch.status).toBe(201);
+			expect(joinSecondMatch.status).toBe(409);
+			expect(joinSecondMatch.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
 		});
 	});
 });

@@ -61,7 +61,11 @@ export function createApp(useDatabase: boolean = false): Application {
 		createAdminMatchesRouter(matchRepository, playerRepository),
 	);
 	app.use("/players", authenticate, createPlayersRouter(playerRepository));
-	app.use("/matches", authenticate, createMatchesRouter(matchRepository));
+	app.use(
+		"/matches",
+		authenticate,
+		createMatchesRouter(matchRepository, playerRepository),
+	);
 
 	return app;
 }

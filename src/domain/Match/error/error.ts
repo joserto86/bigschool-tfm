@@ -19,6 +19,13 @@ export class InvalidMatchDateTimeError extends Error {
 	}
 }
 
+export class PlayerAlreadyScheduledError extends Error {
+	constructor(playerId: string, dateTime: string) {
+		super(`Player '${playerId}' is already registered in a match at '${dateTime}'.`);
+		this.name = "PlayerAlreadyScheduledError";
+	}
+}
+
 export class MatchNotFoundError extends Error {
 	constructor(matchId: string) {
 		super(`Match '${matchId}' was not found.`);

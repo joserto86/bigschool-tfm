@@ -16,13 +16,13 @@ Diseñar una API REST para gestionar partidos de un club privado de pádel, cubr
 
 ---
 
-# 2. Conceptos principales
+## 2. Conceptos principales
 
-## Jugador
+### Jugador
 
 Identificado de forma única mediante `playerId`.
 
-## Partido
+### Partido
 
 Entidad que representa un partido programado en una fecha y hora determinadas.
 
@@ -51,7 +51,7 @@ Match C -> 2026-10-10 18:00
 
 ---
 
-# 3. Estados del partido
+## 3. Estados del partido
 
 Se propone el siguiente conjunto de estados:
 
@@ -111,9 +111,9 @@ Esto además evita ambigüedad cuando existen varios partidos a la misma fecha y
 
 ---
 
-# 4. Reglas de negocio
+## 4. Reglas de negocio
 
-## RN-01 — Máximo 4 jugadores
+### RN-01 — Máximo 4 jugadores
 
 Un partido no puede tener más de 4 jugadores:
 
@@ -129,7 +129,7 @@ OPEN -> COMPLETED
 
 ---
 
-## RN-02 — Un jugador sólo puede aparecer una vez
+### RN-02 — Un jugador sólo puede aparecer una vez
 
 La combinación:
 
@@ -147,7 +147,7 @@ UNIQUE(match_id, player_id)
 
 ---
 
-## RN-03 — Creación explícita del partido
+### RN-03 — Creación explícita del partido
 
 La creación del partido se realiza mediante:
 
@@ -156,6 +156,8 @@ POST /matches
 ```
 
 El cliente proporciona al menos la fecha y hora.
+
+Al crear el partido el cliente se inscribe en el mismo en el primer hueco disponible
 
 Ejemplo:
 
@@ -176,7 +178,7 @@ No existe ninguna restricción que impida crear varios partidos con el mismo `da
 
 ---
 
-## RN-04 — Varios partidos pueden compartir fecha y hora
+### RN-04 — Varios partidos pueden compartir fecha y hora
 
 La siguiente situación es válida:
 
@@ -199,7 +201,11 @@ El `matchId` es quien identifica inequívocamente un partido.
 
 ---
 
-## RN-05 — Inscripción mediante `matchId`
+### RN-05 - Un jugador no puede inscribirse en varios partidos a la misma fecha y hora
+
+Dado que puede haber varios partidos a la misma hora, un jugador no puede inscribirse en más de uno de ellos, es fisicamente imposible que un jugador esté en dos partidos a la vez.
+
+### RN-06 — Inscripción mediante `matchId`
 
 Dado que puede haber varios partidos a la misma hora, un jugador debe indicar explícitamente a qué partido quiere apuntarse.
 
@@ -218,7 +224,7 @@ El servidor:
 
 ---
 
-## RN-06 — Asignación automática del siguiente hueco
+### RN-07 — Asignación automática del siguiente hueco
 
 El cliente no especifica el `slot`.
 
@@ -247,7 +253,7 @@ slot ∈ {1,2,3,4}
 
 ---
 
-## RN-07 — Cuatro jugadores implican partido completado
+### RN-08 — Cuatro jugadores implican partido completado
 
 Cuando se registra el cuarto jugador:
 
@@ -259,7 +265,7 @@ La transición debe realizarse en la misma transacción que la inscripción.
 
 ---
 
-## RN-08 — Confirmación individual
+### RN-09 — Confirmación individual
 
 Cuando un partido está `COMPLETED`, cada jugador debe confirmar o rechazar.
 
@@ -282,7 +288,7 @@ PENDING
 
 ---
 
-## RN-09 — Un rechazo cancela el partido
+### RN-10 — Un rechazo cancela el partido
 
 Si cualquiera de los cuatro jugadores rechaza el partido:
 
@@ -294,7 +300,7 @@ No es necesario esperar la respuesta de los otros jugadores.
 
 ---
 
-## RN-10 — Cuatro confirmaciones confirman el partido
+### RN-11 — Cuatro confirmaciones confirman el partido
 
 Cuando los cuatro jugadores han confirmado:
 
@@ -306,7 +312,7 @@ El partido queda confirmado.
 
 ---
 
-## RN-11 — Desinscripción
+### RN-12 — Desinscripción
 
 Un jugador puede desinscribirse únicamente si el partido está:
 
@@ -321,7 +327,7 @@ COMPLETED
 CONFIRMED
 ```
 
-### Último jugador
+#### Último jugador
 
 Si el jugador era el único inscrito:
 
@@ -337,7 +343,7 @@ Por tanto, no se permite que un partido sobreviva sin jugadores como consecuenci
 
 ---
 
-## RN-12 — Partido confirmado inmutable
+### RN-13 — Partido confirmado inmutable
 
 Un partido `CONFIRMED` no puede editarse.
 
@@ -350,9 +356,9 @@ Esto incluye, como mínimo:
 
 ---
 
-# 5. Modelo de datos
+## 5. Modelo de datos
 
-## Tabla `matches`
+### Tabla `matches`
 
 ```text
 matches
@@ -362,6 +368,7 @@ date_time       NOT NULL
 status          NOT NULL
 created_at      NOT NULL
 updated_at      NOT NULL
+place           NULL
 ```
 
 Importante:
@@ -374,7 +381,7 @@ Puede haber múltiples registros con la misma fecha/hora.
 
 ---
 
-## Tabla `match_players`
+### Tabla `match_players`
 
 ```text
 match_players
@@ -399,9 +406,9 @@ DECLINED
 
 ---
 
-# 6. Endpoints
+## 6. Endpoints
 
-## 6.1 Crear partido
+### 6.1 Crear partido
 
 ```http
 POST /matches
@@ -426,7 +433,14 @@ Respuesta:
   "id": "match-123",
   "dateTime": "2026-10-10T18:00:00+02:00",
   "status": "OPEN",
-  "players": []
+  "players": [
+    {
+      "id": "player-1",
+      "name": "player-name",
+      "slot": 1,
+      "confirmation": null
+    }
+  ]
 }
 ```
 
@@ -446,7 +460,7 @@ y generan dos `matchId` diferentes.
 
 ---
 
-## 6.2 Consultar partido
+### 6.2 Consultar partido
 
 ```http
 GET /matches/{matchId}
@@ -461,12 +475,16 @@ Ejemplo de respuesta:
   "status": "OPEN",
   "players": [
     {
-      "playerId": "player-1",
-      "slot": 1
+      "id": "player-1",
+      "name": "player1-name",
+      "slot": 1,
+      "confirmation": null
     },
     {
-      "playerId": "player-2",
-      "slot": 2
+      "id": "player-2",
+      "name": "player2-name",
+      "slot": 2,
+      "confirmation": null
     }
   ]
 }
@@ -474,7 +492,7 @@ Ejemplo de respuesta:
 
 ---
 
-## 6.3 Consultar partidos por fecha/hora
+### 6.3 Consultar partidos por fecha/hora
 
 Dado que puede haber múltiples partidos en el mismo horario, resulta necesario poder recuperarlos:
 
@@ -505,18 +523,10 @@ Esto permite que un usuario seleccione posteriormente el `matchId` al que quiere
 
 ---
 
-## 6.4 Inscribir jugador
+### 6.4 Inscribir jugador
 
 ```http
 POST /matches/{matchId}/players
-```
-
-Body:
-
-```json
-{
-  "playerId": "player-2"
-}
 ```
 
 Respuesta:
@@ -547,7 +557,7 @@ Si es el cuarto jugador:
 
 ---
 
-## 6.5 Desinscribir jugador
+### 6.5 Desinscribir jugador
 
 ```http
 DELETE /matches/{matchId}/players/{playerId}
@@ -565,7 +575,7 @@ Si es el último jugador, se elimina también el partido.
 
 ---
 
-## 6.6 Confirmar o rechazar partido
+### 6.6 Confirmar o rechazar partido
 
 ```http
 POST /matches/{matchId}/confirmation
@@ -575,7 +585,6 @@ Body para confirmar:
 
 ```json
 {
-  "playerId": "player-1",
   "decision": "CONFIRMED"
 }
 ```
@@ -584,7 +593,6 @@ Body para rechazar:
 
 ```json
 {
-  "playerId": "player-1",
   "decision": "DECLINED"
 }
 ```
@@ -601,7 +609,7 @@ COMPLETED + 4 CONFIRMED
 
 ---
 
-# 7. API mínima
+## 7. API mínima
 
 Con estos cambios, la API mínima queda:
 
@@ -611,7 +619,7 @@ GET    /matches/{matchId}
 GET    /matches?dateTime={dateTime}
 
 POST   /matches/{matchId}/players
-DELETE /matches/{matchId}/players/{playerId}
+DELETE /matches/{matchId}/players
 
 POST   /matches/{matchId}/confirmation
 ```
@@ -636,7 +644,7 @@ Player declines
 
 ---
 
-# 8. Concurrencia
+## 8. Concurrencia
 
 La concurrencia sigue siendo especialmente relevante en la inscripción de jugadores.
 
@@ -680,9 +688,11 @@ La eliminación del último jugador debe ejecutarse también de forma transaccio
 
 ---
 
-# 9. Autorización
+## 9. Autorización
 
-En una implementación real, el `playerId` debería preferiblemente obtenerse de la identidad autenticada en lugar de confiar en el valor enviado por el cliente.
+~~En una implementación real, el `playerId` debería preferiblemente obtenerse de la identidad autenticada en lugar de confiar en el valor enviado por el cliente.~~
+
+La autorización se establece mediante JWT token, obteniendose el `playerId` del token de autenticación
 
 Por ejemplo:
 
@@ -708,7 +718,7 @@ Esto evita que un jugador pueda operar en nombre de otro.
 
 ---
 
-# 10. Resumen de decisiones
+## 10. Resumen de decisiones
 
 | Necesidad                             | Solución                              |
 | ------------------------------------- | ------------------------------------- |
@@ -729,7 +739,7 @@ Esto evita que un jugador pueda operar en nombre de otro.
 
 ---
 
-# 11. Arquitectura recomendada
+## 11. Arquitectura recomendada
 
 La lógica de negocio debería permanecer fuera del controlador HTTP:
 

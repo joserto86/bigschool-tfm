@@ -13,6 +13,7 @@ export interface Match {
 	dateTime: string;
 	status: MatchStatus;
 	players: MatchPlayer[];
+	place?: string | null;
 	createdAt: Date;
 	updatedAt: Date | null;
 }

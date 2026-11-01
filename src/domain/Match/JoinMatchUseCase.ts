@@ -2,7 +2,10 @@ import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchR
 import { FULL_MATCH_PLAYER_COUNT } from "./Constants";
 import { JoinMatchInputDto } from "./dto/JoinMatchInputDto";
 import { JoinMatchResultDto } from "./dto/JoinMatchResult.Dto";
-import { MatchNotFoundError } from "./error/error";
+import {
+	MatchNotFoundError,
+	PlayerAlreadyScheduledError,
+} from "./error/error";
 
 export class PlayerAlreadyRegisteredError extends Error {
 	constructor(playerId: string, matchId: string) {
@@ -32,6 +35,18 @@ export class JoinMatchUseCase {
 
 		if (match.players.some((player) => player.playerId === playerId)) {
 			throw new PlayerAlreadyRegisteredError(playerId, matchId);
+		}
+
+		const matchDateTime = new Date(match.dateTime).getTime();
+		const otherMatches = await this.matchRepository.list();
+		const alreadyScheduled = otherMatches.some(
+			(candidate) =>
+				candidate.id !== matchId &&
+				new Date(candidate.dateTime).getTime() === matchDateTime &&
+				candidate.players.some((player) => player.playerId === playerId),
+		);
+		if (alreadyScheduled) {
+			throw new PlayerAlreadyScheduledError(playerId, match.dateTime);
 		}
 
 		if (match.players.length >= FULL_MATCH_PLAYER_COUNT) {

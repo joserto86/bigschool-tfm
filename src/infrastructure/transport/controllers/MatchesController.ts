@@ -8,7 +8,17 @@ import {
 } from "../../../domain/Match/JoinMatchUseCase";
 import { LeaveMatchUseCase } from "../../../domain/Match/LeaveMatchUseCase";
 import { ConfirmMatchUseCase } from "../../../domain/Match/ConfirmMatchUseCase";
-import { InvalidMatchDateTimeError, MatchNotCompletedError, MatchNotFoundError, MatchNotOpenError, MissingDateTimeQueryError, PlayerNotInMatchError } from "../../../domain/Match/error/error";
+import {
+	InvalidMatchDateTimeError,
+	MatchNotCompletedError,
+	MatchNotFoundError,
+	MatchNotOpenError,
+	MissingDateTimeQueryError,
+	PlayerAlreadyScheduledError,
+	PlayerNotInMatchError,
+} from "../../../domain/Match/error/error";
+import { IPlayerRepository } from "../../persistence/Player/IPlayerRepository";
+import { Match, MatchPlayer } from "../../../types/match";
 
 export class MatchesController {
 	constructor(
@@ -17,7 +27,29 @@ export class MatchesController {
 		private readonly joinMatchUseCase: JoinMatchUseCase,
 		private readonly leaveMatchUseCase: LeaveMatchUseCase,
 		private readonly confirmMatchUseCase: ConfirmMatchUseCase,
+		private readonly playerRepository: IPlayerRepository,
 	) {}
+
+	private async toMatchResponse(match: Match) {
+		const players = await Promise.all(
+			match.players.map(async (player: MatchPlayer) => {
+				const registeredPlayer = await this.playerRepository.findById(
+					player.playerId,
+				);
+				return {
+					...player,
+					id: player.playerId,
+					name: registeredPlayer?.name ?? player.playerId,
+				};
+			}),
+		);
+
+		return {
+			...match,
+			place: match.place ?? null,
+			players,
+		};
+	}
 
 	createMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -25,11 +57,18 @@ export class MatchesController {
 				dateTime: req.body?.dateTime,
 				playerId: req.auth?.playerId as string,
 			});
-			res.status(201).json(match);
+			res.status(201).json(await this.toMatchResponse(match));
 		} catch (error) {
 			if (error instanceof InvalidMatchDateTimeError) {
 				res.status(400).json({
 					code: "INVALID_REQUEST",
+					message: error.message,
+				});
+				return;
+			}
+			if (error instanceof PlayerAlreadyScheduledError) {
+				res.status(409).json({
+					code: "PLAYER_ALREADY_SCHEDULED",
 					message: error.message,
 				});
 				return;
@@ -43,7 +82,9 @@ export class MatchesController {
 			const items = await this.getMatchesUseCase.getMatchesByDateTime(
 				req.query.dateTime as string,
 			);
-			res.status(200).json({ items });
+			res.status(200).json({
+				items: await Promise.all(items.map((item) => this.toMatchResponse(item))),
+			});
 		} catch (error) {
 			if (error instanceof MissingDateTimeQueryError) {
 				res.status(400).json({
@@ -59,7 +100,7 @@ export class MatchesController {
 	getMatchById = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const match = await this.getMatchesUseCase.getMatch(req.params.matchId as string);
-			res.status(200).json(match);
+			res.status(200).json(await this.toMatchResponse(match));
 		} catch (error) {
 			if (error instanceof MatchNotFoundError) {
 				res.status(404).json({
@@ -97,6 +138,13 @@ export class MatchesController {
 			if (error instanceof MatchFullError) {
 				res.status(409).json({
 					code: "MATCH_FULL",
+					message: error.message,
+				});
+				return;
+			}
+			if (error instanceof PlayerAlreadyScheduledError) {
+				res.status(409).json({
+					code: "PLAYER_ALREADY_SCHEDULED",
 					message: error.message,
 				});
 				return;

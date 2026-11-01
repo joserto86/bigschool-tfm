@@ -2,7 +2,10 @@ import { randomUUID } from "crypto";
 import { Match } from "../../types/match";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { CreateMatchInputDto } from "./dto/CreateMatchInputDto";
-import { InvalidMatchDateTimeError } from "./error/error";
+import {
+	InvalidMatchDateTimeError,
+	PlayerAlreadyScheduledError,
+} from "./error/error";
 
 export class CreateMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
@@ -22,10 +25,23 @@ export class CreateMatchUseCase {
 			throw new InvalidMatchDateTimeError();
 		}
 
+		if (playerId) {
+			const matches = await this.matchRepository.list();
+			const alreadyScheduled = matches.some(
+				(match) =>
+					new Date(match.dateTime).getTime() === parsedDateTime.getTime() &&
+					match.players.some((player) => player.playerId === playerId),
+			);
+			if (alreadyScheduled) {
+				throw new PlayerAlreadyScheduledError(playerId, dateTime);
+			}
+		}
+
 		const match: Match = {
 			id: randomUUID(),
 			dateTime,
 			status: "OPEN",
+			place: null,
 			players: playerId
 				? [{ playerId, slot: 1, confirmation: null }]
 				: [],

@@ -81,6 +81,13 @@ describe("Players API", () => {
 				decision: "CONFIRMED",
 				matchStatus: "COMPLETED",
 			});
+
+			const match = await request(app)
+				.get(`/matches/${matchId}`)
+				.set("Authorization", authorization);
+
+			expect(match.status).toBe(200);
+			expect(match.body.place === null || typeof match.body.place === "string").toBe(true);
 		});
 
 		it("transitions the match to CONFIRMED once all four players confirm", async () => {
