@@ -1,6 +1,10 @@
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { LeaveMatchInputDto } from "./dto/LeaveMatchInputDto";
-import { MatchNotFoundError, MatchNotOpenError, PlayerNotInMatchError } from "./error/error";
+import {
+	MatchNotFoundError,
+	MatchNotOpenError,
+	PlayerNotInMatchError,
+} from "./error";
 
 export class LeaveMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}

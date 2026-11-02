@@ -14,7 +14,7 @@ import {
 	InvalidMatchDateTimeError,
 	MatchNotFoundError,
 	MatchNotOpenError,
-} from "../../../domain/Match/error/error";
+} from "../../../domain/Match/error";
 
 export class AdminMatchesController {
 	constructor(private readonly useCases: AdminMatchesUseCases) {}

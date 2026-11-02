@@ -22,6 +22,17 @@ export class InMemoryMatchRepository implements IMatchRepository {
 		return this.matches.filter((match) => match.dateTime === dateTime);
 	}
 
+	async findByPlayerIdAfterDateTime(
+		playerId: string,
+		dateTime: Date,
+	): Promise<Match[]> {
+		return this.matches.filter(
+			(match) =>
+				new Date(match.dateTime).getTime() > dateTime.getTime() &&
+				match.players.some((player) => player.playerId === playerId),
+		);
+	}
+
 	async findById(matchId: string): Promise<Match | undefined> {
 		return this.matches.find((match) => match.id === matchId);
 	}

@@ -5,7 +5,7 @@ import { CreateMatchInputDto } from "./dto/CreateMatchInputDto";
 import {
 	InvalidMatchDateTimeError,
 	PlayerAlreadyScheduledError,
-} from "./error/error";
+} from "./error";
 
 export class CreateMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
@@ -42,9 +42,7 @@ export class CreateMatchUseCase {
 			dateTime,
 			status: "OPEN",
 			place: null,
-			players: playerId
-				? [{ playerId, slot: 1, confirmation: null }]
-				: [],
+			players: playerId ? [{ playerId, slot: 1, confirmation: null }] : [],
 			createdAt: new Date(),
 			updatedAt: null,
 		};

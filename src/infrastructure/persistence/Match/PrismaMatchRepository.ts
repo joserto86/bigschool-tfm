@@ -92,6 +92,21 @@ export class PrismaMatchRepository implements IMatchRepository {
 		return matches.map((match) => this.toDomain(match));
 	}
 
+	async findByPlayerIdAfterDateTime(
+		playerId: string,
+		dateTime: Date,
+	): Promise<Match[]> {
+		const matches = await this.prisma.match.findMany({
+			where: {
+				dateTime: { gt: dateTime },
+				players: { some: { playerId } },
+			},
+			include: { players: true },
+		});
+
+		return matches.map((match) => this.toDomain(match));
+	}
+
 	async findById(matchId: string): Promise<Match | undefined> {
 		const match = await this.prisma.match.findUnique({
 			where: { id: matchId },

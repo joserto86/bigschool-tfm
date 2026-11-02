@@ -411,7 +411,7 @@ DECLINED
 ### 6.1 Crear partido
 
 ```http
-POST /matches
+POST /api/matches
 ```
 
 Body:
@@ -449,10 +449,10 @@ No se comprueba que ya exista otro partido con esa fecha/hora.
 Por ejemplo, ambas peticiones son válidas:
 
 ```text
-POST /matches
+POST /api/matches
 dateTime = 2026-10-10T18:00
 
-POST /matches
+POST /api/matches
 dateTime = 2026-10-10T18:00
 ```
 
@@ -463,7 +463,7 @@ y generan dos `matchId` diferentes.
 ### 6.2 Consultar partido
 
 ```http
-GET /matches/{matchId}
+GET /api/matches/{matchId}
 ```
 
 Ejemplo de respuesta:
@@ -497,7 +497,7 @@ Ejemplo de respuesta:
 Dado que puede haber múltiples partidos en el mismo horario, resulta necesario poder recuperarlos:
 
 ```http
-GET /matches?dateTime=2026-10-10T18:00:00+02:00
+GET /api/matches?dateTime=2026-10-10T18:00:00+02:00
 ```
 
 Respuesta:
@@ -526,7 +526,7 @@ Esto permite que un usuario seleccione posteriormente el `matchId` al que quiere
 ### 6.4 Inscribir jugador
 
 ```http
-POST /matches/{matchId}/players
+POST /api/matches/{matchId}/players
 ```
 
 Respuesta:
@@ -560,7 +560,7 @@ Si es el cuarto jugador:
 ### 6.5 Desinscribir jugador
 
 ```http
-DELETE /matches/{matchId}/players/{playerId}
+DELETE /api/matches/{matchId}/players/{playerId}
 ```
 
 Respuesta:
@@ -578,7 +578,7 @@ Si es el último jugador, se elimina también el partido.
 ### 6.6 Confirmar o rechazar partido
 
 ```http
-POST /matches/{matchId}/confirmation
+POST /api/matches/{matchId}/confirmation
 ```
 
 Body para confirmar:
@@ -614,14 +614,14 @@ COMPLETED + 4 CONFIRMED
 Con estos cambios, la API mínima queda:
 
 ```http
-POST   /matches
-GET    /matches/{matchId}
-GET    /matches?dateTime={dateTime}
+POST   /api/matches
+GET    /api/matches/{matchId}
+GET    /api/matches?dateTime={dateTime}
 
-POST   /matches/{matchId}/players
-DELETE /matches/{matchId}/players
+POST   /api/matches/{matchId}/players
+DELETE /api/matches/{matchId}/players
 
-POST   /matches/{matchId}/confirmation
+POST   /api/matches/{matchId}/confirmation
 ```
 
 No es necesario exponer un endpoint específico para cambiar el estado del partido.
@@ -697,7 +697,7 @@ La autorización se establece mediante JWT token, obteniendose el `playerId` del
 Por ejemplo:
 
 ```http
-POST /matches/{matchId}/players
+POST /api/matches/{matchId}/players
 ```
 
 podría no necesitar body:

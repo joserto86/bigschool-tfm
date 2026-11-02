@@ -2,10 +2,7 @@ import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchR
 import { FULL_MATCH_PLAYER_COUNT } from "./Constants";
 import { JoinMatchInputDto } from "./dto/JoinMatchInputDto";
 import { JoinMatchResultDto } from "./dto/JoinMatchResult.Dto";
-import {
-	MatchNotFoundError,
-	PlayerAlreadyScheduledError,
-} from "./error/error";
+import { MatchNotFoundError, PlayerAlreadyScheduledError } from "./error";
 
 export class PlayerAlreadyRegisteredError extends Error {
 	constructor(playerId: string, matchId: string) {
@@ -25,7 +22,6 @@ export class JoinMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 
 	async execute(input: JoinMatchInputDto): Promise<JoinMatchResultDto> {
-
 		const { matchId, playerId } = input;
 		const match = await this.matchRepository.findById(matchId);
 

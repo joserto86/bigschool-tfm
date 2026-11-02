@@ -39,7 +39,7 @@ Las rutas administrativas deben responder `401 Unauthorized` si falta una autent
 ### Crear un jugador
 
 ```http
-POST /admin/players
+POST /api/admin/players
 ```
 
 Requiere rol de administrador. Recibe `name`, `email`, `password`, `phone` y `active`. El estado se indica explícitamente al crear la cuenta.
@@ -49,7 +49,7 @@ Respuesta `201 Created`: representación del jugador, sin datos de contraseña. 
 ### Listar jugadores
 
 ```http
-GET /admin/players
+GET /api/admin/players
 ```
 
 Requiere rol de administrador.
@@ -59,7 +59,7 @@ Respuesta `200 OK`: lista de jugadores, sin datos de contraseña.
 ### Consultar un jugador
 
 ```http
-GET /admin/players/{playerId}
+GET /api/admin/players/{playerId}
 ```
 
 Requiere rol de administrador y permite consultar cualquier jugador.
@@ -69,7 +69,7 @@ Respuesta `200 OK` con la representación del jugador, o `404 Not Found` si no e
 ### Actualizar los datos de un jugador
 
 ```http
-PATCH /admin/players/{playerId}
+PATCH /api/admin/players/{playerId}
 ```
 
 Requiere rol de administrador y permite actualizar cualquier jugador. Permite modificar `name`, `email`, `isAdmin` y `phone`; el estado activo/inactivo se cambia mediante el endpoint de estado. No modifica la contraseña, cuyo cambio sigue el flujo de autenticación.
@@ -79,7 +79,7 @@ Respuesta `200 OK` con el jugador actualizado. Responde `404 Not Found` si no ex
 ### Consultar la propia información
 
 ```http
-GET /players/me
+GET /api/players/me
 ```
 
 Requiere autenticación. Devuelve únicamente la información del jugador asociado al token (`200 OK`), sin contraseña ni hash. El jugador no puede usar esta operación para consultar la información de otros jugadores.
@@ -87,17 +87,25 @@ Requiere autenticación. Devuelve únicamente la información del jugador asocia
 ### Actualizar la propia información
 
 ```http
-PATCH /players/me
+PATCH /api/players/me
 ```
 
 Requiere autenticación. Permite al jugador modificar únicamente `name`, `email` y `phone` de su propia cuenta. No permite cambiar `active` ni `isAdmin`; esos campos no se aceptan en esta operación. La contraseña se cambia mediante el flujo de autenticación.
 
 Respuesta `200 OK` con la información actualizada. Responde `409 Conflict` si el correo ya pertenece a otro jugador.
 
+### Consultar información propia de partidos inscritos
+
+```http
+GET /api/players/matches
+```
+
+Requiere autenticación. Devuelve la información relativa a los partidos a los que está inscrito un jugador cuya fecha sea mayor a la actual en el momento de la petición. Respuesta `200 OK` con dicha información.
+
 ### Activar o inactivar un jugador
 
 ```http
-PATCH /admin/players/{playerId}/status
+PATCH /api/admin/players/{playerId}/status
 ```
 
 Requiere rol de administrador y permite cambiar el estado de cualquier jugador.
@@ -115,7 +123,7 @@ Usar `active: true` para activar y `active: false` para inactivar. Respuesta `20
 ### Eliminar un jugador
 
 ```http
-DELETE /admin/players/{playerId}
+DELETE /api/admin/players/{playerId}
 ```
 
 Requiere rol de administrador y permite eliminar cualquier jugador.

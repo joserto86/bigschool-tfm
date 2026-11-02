@@ -1,4 +1,5 @@
 import { Application } from "express";
+import { SignJWT } from "jose";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app";
@@ -14,6 +15,7 @@ describe("Own player API", () => {
 	});
 
 	afterEach(() => {
+		vi.useRealTimers();
 		vi.unstubAllEnvs();
 	});
 
@@ -25,6 +27,17 @@ describe("Own player API", () => {
 
 		expect(response.status).toBe(200);
 		return response.body.accessToken as string;
+	}
+
+	async function getAccessTokenFor(playerId: string): Promise<string> {
+		return new SignJWT({})
+			.setProtectedHeader({ alg: "HS256" })
+			.setSubject(playerId)
+			.setIssuer("satispadel-api")
+			.setAudience("satispadel-client")
+			.setIssuedAt()
+			.setExpirationTime("15m")
+			.sign(Buffer.from(JWT_SECRET, "utf8"));
 	}
 
 	describe("GET /api/players/me", () => {
@@ -158,6 +171,96 @@ describe("Own player API", () => {
 				code: "INVALID_REQUEST",
 				message: expect.any(String),
 			});
+		});
+
+	});
+
+	describe("GET /api/players/matches", () => {
+			it("rejects a request without an access token", async () => {
+				const response = await request(app).get("/api/players/matches");
+
+				expect(response.status).toBe(401);
+				expect(response.body).toMatchObject({
+					code: "AUTHENTICATION_FAILED",
+					message: expect.any(String),
+				});
+			});
+
+			it("rejects a request with an invalid access token", async () => {
+				const response = await request(app)
+					.get("/api/players/matches")
+					.set("Authorization", "******");
+
+				expect(response.status).toBe(401);
+				expect(response.body).toMatchObject({
+					code: "AUTHENTICATION_FAILED",
+					message: expect.any(String),
+				});
+			});
+
+			it("returns only future matches registered to the authenticated player", async () => {
+				const accessToken = await getAccessToken();
+				const anotherAccessToken = await getAccessTokenFor("another-player");
+				const ownMatchDateTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+				const anotherMatchDateTime = new Date(
+					Date.now() + 2 * 60 * 60 * 1000,
+				).toISOString();
+				const ownMatch = await request(app)
+					.post("/api/matches")
+					.set("Authorization", `Bearer ${accessToken}`)
+					.send({ dateTime: ownMatchDateTime });
+				const anotherPlayersMatch = await request(app)
+					.post("/api/matches")
+					.set("Authorization", `Bearer ${anotherAccessToken}`)
+					.send({ dateTime: anotherMatchDateTime });
+
+				expect(ownMatch.status).toBe(201);
+				expect(anotherPlayersMatch.status).toBe(201);
+
+				const response = await request(app)
+					.get("/api/players/matches")
+					.set("Authorization", `Bearer ${accessToken}`);
+
+				expect(response.status).toBe(200);
+				expect(response.body.items).toHaveLength(1);
+				expect(response.body.items[0]).toMatchObject({
+					id: ownMatch.body.id,
+					dateTime: ownMatchDateTime,
+					status: "OPEN",
+					players: [
+						{
+							id: "test-player",
+							slot: 1,
+						},
+					],
+				});
+				expect(
+					new Date(response.body.items[0].dateTime).getTime(),
+				).toBeGreaterThan(Date.now());
+			});
+
+			it("does not return a match after its dateTime has passed", async () => {
+				const accessToken = await getAccessToken();
+				const now = Date.now();
+				vi.useFakeTimers({ toFake: ["Date"] });
+				vi.setSystemTime(now);
+				const dateTime = new Date(now + 60 * 60 * 1000).toISOString();
+
+				const created = await request(app)
+					.post("/api/matches")
+					.set("Authorization", `Bearer ${accessToken}`)
+					.send({ dateTime });
+
+				expect(created.status).toBe(201);
+				vi.setSystemTime(new Date(dateTime).getTime() + 1);
+				const freshAccessToken = await getAccessToken();
+
+				const response = await request(app)
+					.get("/api/players/matches")
+					.set("Authorization", `Bearer ${freshAccessToken}`);
+
+				expect(response.status).toBe(200);
+				expect(response.body.items).toEqual([]);
 		});
 	});
 });

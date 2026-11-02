@@ -91,7 +91,11 @@ export function createApp(useDatabase: boolean = false): Application {
 		requireAdmin,
 		createAdminMatchesRouter(matchRepository, playerRepository),
 	);
-	app.use("/api/players", authenticate, createPlayersRouter(playerRepository));
+	app.use(
+		"/api/players",
+		authenticate,
+		createPlayersRouter(playerRepository, matchRepository),
+	);
 	app.use(
 		"/api/matches",
 		authenticate,

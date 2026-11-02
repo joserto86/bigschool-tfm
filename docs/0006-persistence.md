@@ -239,8 +239,8 @@ model Match {
   status    String      @default("OPEN")
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
-
   players   MatchPlayer[]
+  place     String      @default(NULL)
 
   @@map("matches")
 }
@@ -367,12 +367,15 @@ Nota: `JWT_SECRET` debe mantenerse fuera del código fuente y no ser un valor fi
 ## 12. Riesgos y mitigaciones
 
 ### Riesgo 1: cambio de comportamiento entre repositorios
+
 Mitigación: mantener los repositorios detrás de una misma interfaz y validar con pruebas de integración.
 
 ### Riesgo 2: fallos de concurrencia
+
 Mitigación: usar transacciones y restricciones únicas en la base de datos.
 
 ### Riesgo 3: rotación de refresh tokens insegura
+
 Mitigación: almacenar solo hashes y mantener `familyId`, expiración y revocación.
 
 ### Riesgo 4: fuga de credenciales

@@ -1,7 +1,11 @@
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
 import { ConfirmMatchInputDto } from "./dto/ConfirmMatchInputDto";
 import { ConfirmMatchResultDto } from "./dto/ConfirmMatchResultDto";
-import { MatchNotCompletedError, MatchNotFoundError, PlayerNotInMatchError } from "./error/error";
+import {
+	MatchNotCompletedError,
+	MatchNotFoundError,
+	PlayerNotInMatchError,
+} from "./error";
 export class ConfirmMatchUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
 

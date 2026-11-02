@@ -1,6 +1,6 @@
 import { Match } from "../../types/match";
 import { IMatchRepository } from "../../infrastructure/persistence/Match/IMatchRepository";
-import { MatchNotFoundError, MissingDateTimeQueryError } from "./error/error";
+import { MatchNotFoundError, MissingDateTimeQueryError } from "./error";
 
 export class GetMatchesUseCase {
 	constructor(private readonly matchRepository: IMatchRepository) {}
@@ -19,5 +19,12 @@ export class GetMatchesUseCase {
 		}
 
 		return this.matchRepository.findByDateTime(dateTime);
+	}
+
+	async getMatchesForPlayerAfter(
+		playerId: string,
+		dateTime: Date,
+	): Promise<Match[]> {
+		return this.matchRepository.findByPlayerIdAfterDateTime(playerId, dateTime);
 	}
 }

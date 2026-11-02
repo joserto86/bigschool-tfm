@@ -16,9 +16,9 @@ import {
 	MissingDateTimeQueryError,
 	PlayerAlreadyScheduledError,
 	PlayerNotInMatchError,
-} from "../../../domain/Match/error/error";
+} from "../../../domain/Match/error";
 import { IPlayerRepository } from "../../persistence/Player/IPlayerRepository";
-import { Match, MatchPlayer } from "../../../types/match";
+import { toMatchResponse } from "./shared";
 
 export class MatchesController {
 	constructor(
@@ -30,34 +30,13 @@ export class MatchesController {
 		private readonly playerRepository: IPlayerRepository,
 	) {}
 
-	private async toMatchResponse(match: Match) {
-		const players = await Promise.all(
-			match.players.map(async (player: MatchPlayer) => {
-				const registeredPlayer = await this.playerRepository.findById(
-					player.playerId,
-				);
-				return {
-					...player,
-					id: player.playerId,
-					name: registeredPlayer?.name ?? player.playerId,
-				};
-			}),
-		);
-
-		return {
-			...match,
-			place: match.place ?? null,
-			players,
-		};
-	}
-
 	createMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const match = await this.createMatchUseCase.execute({
 				dateTime: req.body?.dateTime,
 				playerId: req.auth?.playerId as string,
 			});
-			res.status(201).json(await this.toMatchResponse(match));
+			res.status(201).json(await toMatchResponse(match, this.playerRepository));
 		} catch (error) {
 			if (error instanceof InvalidMatchDateTimeError) {
 				res.status(400).json({
@@ -83,7 +62,9 @@ export class MatchesController {
 				req.query.dateTime as string,
 			);
 			res.status(200).json({
-				items: await Promise.all(items.map((item) => this.toMatchResponse(item))),
+				items: await Promise.all(
+					items.map((item) => toMatchResponse(item, this.playerRepository)),
+				),
 			});
 		} catch (error) {
 			if (error instanceof MissingDateTimeQueryError) {
@@ -99,8 +80,10 @@ export class MatchesController {
 
 	getMatchById = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const match = await this.getMatchesUseCase.getMatch(req.params.matchId as string);
-			res.status(200).json(await this.toMatchResponse(match));
+			const match = await this.getMatchesUseCase.getMatch(
+				req.params.matchId as string,
+			);
+			res.status(200).json(await toMatchResponse(match, this.playerRepository));
 		} catch (error) {
 			if (error instanceof MatchNotFoundError) {
 				res.status(404).json({

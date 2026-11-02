@@ -14,7 +14,7 @@ import {
 	InvalidAdminMatchRequestError,
 	InvalidAdminMatchTransitionError,
 } from "./error/MatchError";
-import { MatchNotOpenError } from "../Match/error/error";
+import { MatchNotOpenError } from "../Match/error";
 import { FULL_MATCH_PLAYER_COUNT } from "../Match/Constants";
 
 const createMatchSchema = z

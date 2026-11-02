@@ -456,6 +456,27 @@ paths:
         - Password changes use the authentication flow.
         - Email must be unique after normalization.
 
+  /api/players/matches:
+    get:
+      tags: [Players]
+      summary: Consultar los partidos futuros propios
+      description: Devuelve los partidos futuros en los que está inscrito el jugador autenticado.
+      operationId: getOwnPlayerMatches
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Partidos futuros del jugador autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-business-rules:
+        - The player identity is taken from the authenticated token; clients cannot select another player.
+        - Only matches with a dateTime later than the request time are returned.
+
   /api/admin/players:
     get:
       tags: [Admin Players]

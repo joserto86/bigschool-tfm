@@ -5,12 +5,17 @@ import {
 	OwnPlayerEmailConflictError,
 	UpdateOwnPlayerUseCase,
 } from "../../../domain/Player/OwnPlayerUseCases";
+import { GetMatchesUseCase } from "../../../domain/Match/GetMatchesUseCase";
 import { AuthenticationFailedError } from "../../../domain/Auth/Error";
+import { IPlayerRepository } from "../../persistence/Player/IPlayerRepository";
+import { toMatchResponse } from "./shared";
 
 export class PlayersController {
 	constructor(
 		private readonly getOwnPlayerUseCase: GetOwnPlayerUseCase,
 		private readonly updateOwnPlayerUseCase: UpdateOwnPlayerUseCase,
+		private readonly getMatchesUseCase: GetMatchesUseCase,
+		private readonly playerRepository: IPlayerRepository,
 	) {}
 
 	getOwnPlayer = async (req: Request, res: Response): Promise<void> => {
@@ -36,6 +41,29 @@ export class PlayersController {
 			}
 			throw error;
 		}
+	};
+
+	getOwnPlayerMatches = async (req: Request, res: Response): Promise<void> => {
+		const playerId = req.auth?.playerId;
+		if (!playerId) {
+			res.status(401).json({
+				code: "AUTHENTICATION_FAILED",
+				message: "Authentication failed.",
+			});
+			return;
+		}
+
+		const matches = await this.getMatchesUseCase.getMatchesForPlayerAfter(
+			playerId,
+			new Date(),
+		);
+		res.status(200).json({
+			items: await Promise.all(
+				matches.map((match) =>
+					toMatchResponse(match, this.playerRepository),
+				),
+			),
+		});
 	};
 
 	updateOwnPlayer = async (req: Request, res: Response): Promise<void> => {
