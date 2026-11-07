@@ -37,16 +37,24 @@ export class CreateMatchUseCase {
 			}
 		}
 
+		const players =
+			input.players ??
+			(playerId ? [{ playerId, slot: 1, confirmation: null }] : []);
 		const match: Match = {
 			id: randomUUID(),
 			dateTime,
-			status: "OPEN",
-			place: null,
-			players: playerId ? [{ playerId, slot: 1, confirmation: null }] : [],
+			status:
+				players.length === 4 &&
+				players.every((player) => player.confirmation === "CONFIRMED")
+					? "COMPLETED"
+					: "OPEN",
+			place: input.place ?? null,
+			players,
 			createdAt: new Date(),
 			updatedAt: null,
 		};
 
 		return this.matchRepository.create(match);
+		// return toMatchResponse(await this.matchRepository.create(match));
 	}
 }

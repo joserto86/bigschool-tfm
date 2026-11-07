@@ -11,6 +11,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 				id: match.id,
 				dateTime: this.parseDateTime(match.dateTime),
 				status: match.status,
+				place: match.place ?? null,
 				players: {
 					create: match.players.map((player) => ({
 						playerId: player.playerId,
@@ -28,7 +29,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			id: created.id,
 			dateTime: created.dateTime.toISOString(),
 			status: created.status as Match["status"],
-			place: null,
+			place: created.place,
 			players: created.players.map((player) => ({
 				playerId: player.playerId,
 				slot: player.slot,
@@ -46,6 +47,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			data: {
 				dateTime: this.parseDateTime(match.dateTime),
 				status: match.status,
+				place: match.place ?? null,
 				players: {
 					deleteMany: {},
 					create: match.players.map((player) => ({
@@ -63,7 +65,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			id: updated.id,
 			dateTime: updated.dateTime.toISOString(),
 			status: updated.status as Match["status"],
-			place: null,
+			place: updated.place,
 			players: updated.players.map((player) => ({
 				playerId: player.playerId,
 				slot: player.slot,
@@ -127,6 +129,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 		id: string;
 		dateTime: Date;
 		status: string;
+		place?: string | null;
 		createdAt: Date;
 		updatedAt?: Date | null;
 		players: Array<{
@@ -139,7 +142,7 @@ export class PrismaMatchRepository implements IMatchRepository {
 			id: match.id,
 			dateTime: match.dateTime.toISOString(),
 			status: match.status as Match["status"],
-			place: null,
+			place: match.place ?? null,
 			players: match.players.map((player) => ({
 				playerId: player.playerId,
 				slot: player.slot,

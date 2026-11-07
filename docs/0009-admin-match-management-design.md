@@ -46,7 +46,7 @@ Las respuestas usan el modelo `Match` existente: `id`, `dateTime`, `status` y `p
 ### Crear un partido
 
 ```http
-POST /admin/matches
+POST /api/admin/matches
 ```
 
 Solicitud:
@@ -54,17 +54,28 @@ Solicitud:
 ```json
 {
   "dateTime": "2026-10-10T18:00:00+02:00"
+  "place": "place-1",
+  "players: [{
+      id: "player-1"
+      slot: 1,
+      confirmation: "CONFIRMED"
+    },{
+      id: "player-2"
+      slot: 2,
+      confirmation: "PENDING"
+    }
+  ]
 }
 ```
 
-La API valida `dateTime`, genera el identificador, establece `status: OPEN` y crea el partido sin jugadores.
+La API valida `dateTime`, genera el identificador, establece `status: OPEN` y crea el partido con la información indicada, un mismo jugador no puede aparecer dos veces inscrito en el mismo partido, si todos los jugadores están `CONFIRMED` el partido pasa automáticamente a `COMPLETED`.
 
 Respuesta `201 Created`: objeto `Match`.
 
 ### Listar todos los partidos
 
 ```http
-GET /admin/matches
+GET /api/admin/matches
 ```
 
 Respuesta `200 OK`:
@@ -90,47 +101,55 @@ GET /admin/matches/{matchId}
 
 Respuesta `200 OK`: objeto `Match`. Responde `404 Not Found` si el partido no existe.
 
-### Inscribir un jugador
+### Modificar un partido
 
 ```http
-POST /admin/matches/{matchId}/players
+PUT /api/admin/matches/{matchId}
 ```
 
 Solicitud:
 
 ```json
 {
-  "playerId": "player-123"
+  "dateTime": "2026-10-10T18:00:00+02:00"
+  "place": "place-1",
+  "status": "OPEN",
+  "players: [{
+      id: "player-1"
+      slot: 1,
+      confirmation: "CONFIRMED"
+    },{
+      id: "player-2"
+      slot: 2,
+      confirmation: "PENDING"
+    }
+  ]
 }
 ```
 
-La API comprueba que existen el partido y el jugador, que el partido está `OPEN`, que el jugador aún no está inscrito y que queda un hueco. El servidor asigna el `slot`.
-
-Respuesta `201 Created`: objeto `Match` actualizado. Si se ocupa el cuarto hueco, la respuesta refleja el estado `COMPLETED`.
-
-### Desinscribir un jugador
+Respuesta `200 OK`: objeto `Match` actualizado. Responde `404 Not Found` si el partido no existe y `409 Conflict` si se intenta inscribir a un jugador duplicado o superar cuatro jugadores.
 
 ```http
-DELETE /admin/matches/{matchId}/players/{playerId}
+PATCH /api/admin/matches/{matchId}
 ```
+
+```json
+{
+  "dateTime": "2026-10-10T18:00:00+02:00"
+  "place": "place-1",
+  "status": "OPEN"
+}
+```
+
+Respuesta `200 OK`: objeto `Match` actualizado. Responde `404 Not Found` si el partido no existe y `409 Conflict` si se intenta cambiar a un estado no permitido.
+
+
 
 La API elimina la inscripción y cambia el estado del partido a `OPEN`. Si la inscripción no existe o el partido no existe, responde `404 Not Found`.
 
 Respuesta `200 OK`: objeto `Match` actualizado.
 
-### Cambiar el estado de un partido
-
-```http
-PATCH /admin/matches/{matchId}/status
-```
-
-Solicitud:
-
-```json
-{
-  "status": "CONFIRMED"
-}
-```
+#### Cambiar el estado de un partido
 
 Valores aceptados para esta operación:
 
@@ -147,7 +166,7 @@ Respuesta `200 OK`: objeto `Match` actualizado.
 ### Eliminar un partido
 
 ```http
-DELETE /admin/matches/{matchId}
+DELETE /api/admin/matches/{matchId}
 ```
 
 Elimina el partido en cualquier estado.

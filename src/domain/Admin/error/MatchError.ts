@@ -44,6 +44,20 @@ export class AdminMatchPlayerAlreadyRegisteredError extends Error {
 	}
 }
 
+export class AdminMatchDuplicatePlayerError extends Error {
+	constructor(playerId: string) {
+		super(`Player '${playerId}' appears more than once in the match request.`);
+		this.name = "AdminMatchDuplicatePlayerError";
+	}
+}
+
+export class AdminMatchSlotAlreadyUsedError extends Error {
+	constructor(slot: number) {
+		super(`Slot '${slot}' is assigned more than once in the match request.`);
+		this.name = "AdminMatchSlotAlreadyUsedError";
+	}
+}
+
 export class AdminMatchFullError extends Error {
 	constructor(matchId: string) {
 		super(`Match '${matchId}' already has 4 players.`);
@@ -57,4 +71,3 @@ export class AdminMatchRequiresFourPlayersError extends Error {
 		this.name = "AdminMatchRequiresFourPlayersError";
 	}
 }
-

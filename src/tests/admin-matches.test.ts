@@ -5,12 +5,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app";
 
 const JWT_SECRET = "admin-matches-test-secret-with-32-bytes";
-const MATCH_DATE_TIME = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+const MATCH_DATE_TIME = () =>
+	new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type MatchStatus = "OPEN" | "COMPLETED" | "CONFIRMED" | "CANCELLED";
+type PlayerConfirmation = "PENDING" | "CONFIRMED" | "DECLINED";
 
-async function createAccessToken(isAdmin: boolean, playerId: string): Promise<string> {
+interface MatchPlayerInput {
+	id: string;
+	slot: number;
+	confirmation?: PlayerConfirmation;
+}
+
+interface MatchResponse {
+	id: string;
+	dateTime: string;
+	status: MatchStatus;
+	place?: string | null;
+	players: Array<{
+		id: string;
+		name: string;
+		slot: number;
+		confirmation: PlayerConfirmation | null;
+	}>;
+}
+
+async function createAccessToken(
+	isAdmin: boolean,
+	playerId: string,
+): Promise<string> {
 	return new SignJWT({ isAdmin })
 		.setProtectedHeader({ alg: "HS256" })
 		.setSubject(playerId)
@@ -45,6 +69,8 @@ describe("Admin Matches API", () => {
 				return request(app).get(path);
 			case "POST":
 				return request(app).post(path);
+			case "PUT":
+				return request(app).put(path);
 			case "PATCH":
 				return request(app).patch(path);
 			case "DELETE":
@@ -52,28 +78,14 @@ describe("Admin Matches API", () => {
 		}
 	}
 
-	async function createAdminMatch() {
-		const response = await request(app)
-			.post("/api/admin/matches")
-			.set("Authorization", adminAuthorization)
-			.send({ dateTime: MATCH_DATE_TIME() });
-
-		expect(response.status).toBe(201);
-		return response.body as {
-			id: string;
-			dateTime: string;
-			status: MatchStatus;
-			players: Array<{ playerId: string; slot: number; confirmation: string | null }>;
-		};
-	}
-
-	async function createPlayer() {
+	async function createPlayer(): Promise<{ id: string; name: string }> {
 		playerCounter += 1;
+		const name = `Player ${playerCounter}`;
 		const response = await request(app)
 			.post("/api/admin/players")
 			.set("Authorization", adminAuthorization)
 			.send({
-				name: `Player ${playerCounter}`,
+				name,
 				email: `player-${playerCounter}@example.com`,
 				password: "secure-password",
 				phone: `+34600000${String(playerCounter).padStart(3, "0")}`,
@@ -81,31 +93,51 @@ describe("Admin Matches API", () => {
 			});
 
 		expect(response.status).toBe(201);
-		return response.body.id as string;
+		return { id: response.body.id as string, name };
 	}
 
-	async function createCompletedMatch() {
-		const playerIds = ["test-player", "match-player-2", "match-player-3", "match-player-4"];
-		const created = await request(app)
-			.post("/api/matches")
-			.set("Authorization", playerAuthorization)
-			.send({ dateTime: MATCH_DATE_TIME() });
+	async function createAdminMatch(
+		input: {
+			dateTime?: string;
+			place?: string | null;
+			players?: MatchPlayerInput[];
+		} = {},
+	): Promise<MatchResponse> {
+		const response = await request(app)
+			.post("/api/admin/matches")
+			.set("Authorization", adminAuthorization)
+			.send({
+				dateTime: input.dateTime ?? MATCH_DATE_TIME(),
+				...(input.place === undefined ? {} : { place: input.place }),
+				...(input.players === undefined ? {} : { players: input.players }),
+			});
 
-		expect(created.status).toBe(201);
-		for (const playerId of playerIds.slice(1)) {
-			const authorization = `Bearer ${await createAccessToken(false, playerId)}`;
-			const joined = await request(app)
-				.post(`/api/matches/${created.body.id}/players`)
-				.set("Authorization", authorization);
-			expect(joined.status).toBe(201);
-		}
+		expect(response.status).toBe(201);
+		return response.body as MatchResponse;
+	}
 
-		return { matchId: created.body.id as string, playerIds };
+	async function createCompletedMatch(): Promise<{
+		matchId: string;
+		playerIds: string[];
+	}> {
+		const players = await Promise.all(
+			Array.from({ length: 4 }, () => createPlayer()),
+		);
+		const match = await createAdminMatch({
+			players: players.map((player, index) => ({
+				id: player.id,
+				slot: index + 1,
+				confirmation: "CONFIRMED",
+			})),
+		});
+
+		expect(match.status).toBe("COMPLETED");
+		return { matchId: match.id, playerIds: players.map(({ id }) => id) };
 	}
 
 	async function changeMatchStatus(matchId: string, status: MatchStatus) {
 		return request(app)
-			.patch(`/api/admin/matches/${matchId}/status`)
+			.patch(`/api/admin/matches/${matchId}`)
 			.set("Authorization", adminAuthorization)
 			.send({ status });
 	}
@@ -115,10 +147,9 @@ describe("Admin Matches API", () => {
 			["GET", "/api/admin/matches"],
 			["POST", "/api/admin/matches"],
 			["GET", "/api/admin/matches/match-123"],
+			["PUT", "/api/admin/matches/match-123"],
+			["PATCH", "/api/admin/matches/match-123"],
 			["DELETE", "/api/admin/matches/match-123"],
-			["POST", "/api/admin/matches/match-123/players"],
-			["DELETE", "/api/admin/matches/match-123/players/player-123"],
-			["PATCH", "/api/admin/matches/match-123/status"],
 		];
 
 		it.each(protectedOperations)(
@@ -152,7 +183,7 @@ describe("Admin Matches API", () => {
 	});
 
 	describe("POST /api/admin/matches", () => {
-		it("creates an OPEN match without registered players", async () => {
+		it("creates an OPEN match without players when the optional fields are omitted", async () => {
 			const dateTime = MATCH_DATE_TIME();
 			const response = await request(app)
 				.post("/api/admin/matches")
@@ -163,9 +194,75 @@ describe("Admin Matches API", () => {
 			expect(response.body).toMatchObject({
 				dateTime,
 				status: "OPEN",
+				place: null,
 				players: [],
 			});
 			expect(response.body.id).toEqual(expect.any(String));
+		});
+
+		it("creates a match with the provided place and player confirmations", async () => {
+			const first = await createPlayer();
+			const second = await createPlayer();
+			const dateTime = MATCH_DATE_TIME();
+			const response = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime,
+					place: "place-1",
+					players: [
+						{ id: first.id, slot: 1, confirmation: "CONFIRMED" },
+						{ id: second.id, slot: 2 },
+					],
+				});
+
+			expect(response.status).toBe(201);
+			expect(response.body).toMatchObject({
+				dateTime,
+				place: "place-1",
+				status: "OPEN",
+				players: [
+					{
+						id: first.id,
+						name: first.name,
+						slot: 1,
+						confirmation: "CONFIRMED",
+					},
+					{
+						id: second.id,
+						name: second.name,
+						slot: 2,
+						confirmation: "PENDING",
+					},
+				],
+			});
+		});
+
+		it("starts as COMPLETED when all four provided players are confirmed", async () => {
+			const players = await Promise.all(
+				Array.from({ length: 4 }, () => createPlayer()),
+			);
+			const response = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: players.map((player, index) => ({
+						id: player.id,
+						slot: index + 1,
+						confirmation: "CONFIRMED",
+					})),
+				});
+
+			expect(response.status).toBe(201);
+			expect(response.body.status).toBe("COMPLETED");
+			expect(response.body.players).toHaveLength(4);
+			expect(
+				response.body.players.every(
+					(player: MatchResponse["players"][number]) =>
+						player.confirmation === "CONFIRMED",
+				),
+			).toBe(true);
 		});
 
 		it("rejects a missing or invalid dateTime", async () => {
@@ -178,16 +275,98 @@ describe("Admin Matches API", () => {
 				.set("Authorization", adminAuthorization)
 				.send({ dateTime: "not-a-date" });
 
-			expect(missing.status).toBe(400);
-			expect(missing.body).toMatchObject({
-				code: "INVALID_REQUEST",
+			for (const response of [missing, invalid]) {
+				expect(response.status).toBe(400);
+				expect(response.body).toMatchObject({
+					code: "INVALID_REQUEST",
+					message: expect.any(String),
+				});
+			}
+		});
+
+		it("rejects duplicate players, duplicate slots, more than four players, and unknown players", async () => {
+			const player = await createPlayer();
+			const anotherPlayer = await createPlayer();
+			const requestBody = {
+				dateTime: MATCH_DATE_TIME(),
+				players: [
+					{ id: player.id, slot: 1 },
+					{ id: player.id, slot: 2 },
+				],
+			};
+			const duplicate = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send(requestBody);
+			const duplicateSlot = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: [
+						{ id: player.id, slot: 1 },
+						{ id: anotherPlayer.id, slot: 1 },
+					],
+				});
+			const tooMany = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: Array.from({ length: 5 }, (_, index) => ({
+						id: `unknown-${index}`,
+						slot: (index % 4) + 1,
+					})),
+				});
+			const unknownPlayer = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: [{ id: "unknown-player", slot: 1 }],
+				});
+			const invalidSlot = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: [{ id: player.id, slot: 5 }],
+				});
+			const invalidConfirmation = await request(app)
+				.post("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					players: [{ id: player.id, slot: 1, confirmation: "WAITING" }],
+				});
+
+			expect(duplicate.status).toBe(409);
+			expect(duplicate.body).toMatchObject({
+				code: expect.any(String),
 				message: expect.any(String),
 			});
-			expect(invalid.status).toBe(400);
-			expect(invalid.body).toMatchObject({
-				code: "INVALID_REQUEST",
+			expect(duplicateSlot.status).toBe(409);
+			expect(duplicateSlot.body).toMatchObject({
+				code: expect.any(String),
 				message: expect.any(String),
 			});
+			expect(tooMany.status).toBe(400);
+			expect(tooMany.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+			expect(unknownPlayer.status).toBe(404);
+			expect(unknownPlayer.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+			for (const response of [invalidSlot, invalidConfirmation]) {
+				expect(response.status).toBe(400);
+				expect(response.body).toMatchObject({
+					code: "INVALID_REQUEST",
+					message: expect.any(String),
+				});
+			}
 		});
 	});
 
@@ -235,227 +414,260 @@ describe("Admin Matches API", () => {
 		});
 	});
 
-	describe("POST /api/admin/matches/{matchId}/players", () => {
-		it("registers an existing player in the next slot", async () => {
-			const match = await createAdminMatch();
-			const playerId = await createPlayer();
-
-			const response = await request(app)
-				.post(`/api/admin/matches/${match.id}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId });
-
-			expect(response.status).toBe(201);
-			expect(response.body).toMatchObject({
-				id: match.id,
-				status: "OPEN",
-				players: [{ playerId, slot: 1, confirmation: null }],
-			});
-		});
-
-		it("transitions to COMPLETED when the fourth player is registered", async () => {
-			const match = await createAdminMatch();
-			const playerIds = await Promise.all(
-				Array.from({ length: 4 }, () => createPlayer()),
+	describe("PUT /api/admin/matches/{matchId}", () => {
+		it("replaces the full match representation, including its players list", async () => {
+			const originalPlayers = await Promise.all(
+				Array.from({ length: 2 }, () => createPlayer()),
 			);
-			let response;
-
-			for (const playerId of playerIds) {
-				response = await request(app)
-					.post(`/api/admin/matches/${match.id}/players`)
-					.set("Authorization", adminAuthorization)
-					.send({ playerId });
-			}
-
-			expect(response?.status).toBe(201);
-			expect(response?.body.status).toBe("COMPLETED");
-			expect(response?.body.players).toHaveLength(4);
-		});
-
-		it("rejects duplicate players and registrations when the match is not OPEN", async () => {
-			const match = await createAdminMatch();
-			const playerId = await createPlayer();
-			const first = await request(app)
-				.post(`/api/admin/matches/${match.id}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId });
-			const duplicate = await request(app)
-				.post(`/api/admin/matches/${match.id}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId });
-
-			expect(first.status).toBe(201);
-			expect(duplicate.status).toBe(409);
-			expect(duplicate.body).toMatchObject({
-				code: "PLAYER_ALREADY_REGISTERED",
-				message: expect.any(String),
+			const match = await createAdminMatch({
+				players: originalPlayers.map((player, index) => ({
+					id: player.id,
+					slot: index + 1,
+				})),
 			});
-
-			const completed = await createCompletedMatch();
-			const anotherPlayer = await createPlayer();
-			const notOpen = await request(app)
-				.post(`/api/admin/matches/${completed.matchId}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId: anotherPlayer });
-
-			expect(notOpen.status).toBe(409);
-			expect(notOpen.body).toMatchObject({
-				code: "MATCH_NOT_OPEN",
-				message: expect.any(String),
-			});
-		});
-
-		it("rejects invalid requests, unknown players, and full matches", async () => {
-			const match = await createAdminMatch();
-			const invalid = await request(app)
-				.post(`/api/admin/matches/${match.id}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({});
-			const unknownPlayer = await request(app)
-				.post(`/api/admin/matches/${match.id}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId: "unknown-player" });
-
-			expect(invalid.status).toBe(400);
-			expect(invalid.body).toMatchObject({
-				code: "INVALID_REQUEST",
-				message: expect.any(String),
-			});
-			expect(unknownPlayer.status).toBe(404);
-			expect(unknownPlayer.body).toMatchObject({
-				code: expect.any(String),
-				message: expect.any(String),
-			});
-
-			const completed = await createCompletedMatch();
-			const playerId = await createPlayer();
-			const full = await request(app)
-				.post(`/api/admin/matches/${completed.matchId}/players`)
-				.set("Authorization", adminAuthorization)
-				.send({ playerId });
-
-			expect(full.status).toBe(409);
-			expect(full.body).toMatchObject({
-				code: expect.any(String),
-				message: expect.any(String),
-			});
-		});
-	});
-
-	describe("DELETE /api/admin/matches/{matchId}/players/{playerId}", () => {
-		it("removes a player, reopens the match, and resets remaining confirmations", async () => {
-			const { matchId, playerIds } = await createCompletedMatch();
-			const confirmed = await request(app)
-				.post(`/api/matches/${matchId}/confirmation`)
-				.set(
-					"Authorization",
-					`Bearer ${await createAccessToken(false, playerIds[0])}`,
-				)
-				.send({ decision: "CONFIRMED" });
-			expect(confirmed.status).toBe(200);
-
+			const replacementPlayer = await createPlayer();
+			const dateTime = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 			const response = await request(app)
-				.delete(`/api/admin/matches/${matchId}/players/${playerIds[1]}`)
-				.set("Authorization", adminAuthorization);
+				.put(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime,
+					place: "place-2",
+					status: "OPEN",
+					players: [
+						{
+							id: replacementPlayer.id,
+							slot: 3,
+							confirmation: "PENDING",
+						},
+					],
+				});
 
 			expect(response.status).toBe(200);
 			expect(response.body).toMatchObject({
-				id: matchId,
+				id: match.id,
+				dateTime,
+				place: "place-2",
 				status: "OPEN",
+				players: [
+					{
+						id: replacementPlayer.id,
+						name: replacementPlayer.name,
+						slot: 3,
+						confirmation: "PENDING",
+					},
+				],
 			});
-			expect(response.body.players).toHaveLength(3);
-			expect(response.body.players).not.toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						playerId: playerIds[0],
-						confirmation: "CONFIRMED",
-					}),
-				]),
-			);
 		});
 
-		it.each(["CONFIRMED", "CANCELLED"] as const)(
-			"rejects removal while the match is %s",
-			async (status) => {
-				const { matchId, playerIds } = await createCompletedMatch();
-				const changed = await changeMatchStatus(matchId, status);
-				expect(changed.status).toBe(200);
+		it("requires the complete representation and rejects invalid player lists", async () => {
+			const match = await createAdminMatch();
+			const missingFields = await request(app)
+				.put(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ dateTime: MATCH_DATE_TIME() });
+			const player = await createPlayer();
+			const duplicatePlayers = await request(app)
+				.put(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					place: null,
+					status: "OPEN",
+					players: [
+						{ id: player.id, slot: 1 },
+						{ id: player.id, slot: 2 },
+					],
+				});
+			const tooMany = await request(app)
+				.put(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: MATCH_DATE_TIME(),
+					place: null,
+					status: "OPEN",
+					players: Array.from({ length: 5 }, (_, index) => ({
+						id: `unknown-${index}`,
+						slot: (index % 4) + 1,
+					})),
+				});
 
-				const response = await request(app)
-					.delete(`/api/admin/matches/${matchId}/players/${playerIds[0]}`)
-					.set("Authorization", adminAuthorization);
+			expect(missingFields.status).toBe(400);
+			expect(missingFields.body).toMatchObject({
+				code: "INVALID_REQUEST",
+				message: expect.any(String),
+			});
+			expect(duplicatePlayers.status).toBe(409);
+			expect(duplicatePlayers.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+			expect(tooMany.status).toBe(400);
+			expect(tooMany.body).toMatchObject({
+				code: "INVALID_REQUEST",
+				message: expect.any(String),
+			});
+		});
 
-				expect(response.status).toBe(409);
+		it("returns 404 for an unknown match or referenced player", async () => {
+			const player = await createPlayer();
+			const body = {
+				dateTime: MATCH_DATE_TIME(),
+				place: null,
+				status: "OPEN",
+				players: [{ id: player.id, slot: 1 }],
+			};
+			const missingMatch = await request(app)
+				.put("/api/admin/matches/unknown-match")
+				.set("Authorization", adminAuthorization)
+				.send(body);
+			const missingPlayer = await request(app)
+				.put(`/api/admin/matches/${(await createAdminMatch()).id}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					...body,
+					players: [{ id: "unknown-player", slot: 1 }],
+				});
+
+			for (const response of [missingMatch, missingPlayer]) {
+				expect(response.status).toBe(404);
 				expect(response.body).toMatchObject({
 					code: expect.any(String),
 					message: expect.any(String),
 				});
-			},
-		);
+			}
+		});
 
-		it("returns 404 when the match or registration does not exist", async () => {
+		it("rejects a transition to COMPLETED without exactly four players", async () => {
 			const match = await createAdminMatch();
-			const missingMatch = await request(app)
-				.delete("/api/admin/matches/unknown-match/players/player-123")
-				.set("Authorization", adminAuthorization);
-			const missingPlayer = await request(app)
-				.delete(`/api/admin/matches/${match.id}/players/unknown-player`)
-				.set("Authorization", adminAuthorization);
+			const response = await request(app)
+				.put(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: match.dateTime,
+					place: null,
+					status: "COMPLETED",
+					players: [],
+				});
 
-			expect(missingMatch.status).toBe(404);
-			expect(missingMatch.body).toMatchObject({
-				code: "MATCH_NOT_FOUND",
-				message: expect.any(String),
-			});
-			expect(missingPlayer.status).toBe(404);
-			expect(missingPlayer.body).toMatchObject({
+			expect(response.status).toBe(409);
+			expect(response.body).toMatchObject({
 				code: expect.any(String),
 				message: expect.any(String),
 			});
 		});
+
+		it("reopens the match and resets remaining confirmations when PUT removes a player", async () => {
+			const { matchId, playerIds } = await createCompletedMatch();
+			const confirmed = await changeMatchStatus(matchId, "CONFIRMED");
+			expect(confirmed.status).toBe(200);
+			const reopened = await changeMatchStatus(matchId, "COMPLETED");
+			expect(reopened.status).toBe(200);
+
+			const response = await request(app)
+				.put(`/api/admin/matches/${matchId}`)
+				.set("Authorization", adminAuthorization)
+				.send({
+					dateTime: reopened.body.dateTime,
+					place: null,
+					status: "OPEN",
+					players: playerIds.slice(1).map((id, index) => ({
+						id,
+						slot: index + 2,
+						confirmation: "CONFIRMED",
+					})),
+				});
+
+			expect(response.status).toBe(200);
+			expect(response.body.status).toBe("OPEN");
+			expect(response.body.players).toHaveLength(3);
+			expect(
+				response.body.players.every(
+					(player: MatchResponse["players"][number]) =>
+						player.confirmation === "PENDING",
+				),
+			).toBe(true);
+		});
 	});
 
-	describe("PATCH /api/admin/matches/{matchId}/status", () => {
-		it("transitions an OPEN match to CANCELLED", async () => {
-			const match = await createAdminMatch();
-
-			const response = await changeMatchStatus(match.id, "CANCELLED");
+	describe("PATCH /api/admin/matches/{matchId}", () => {
+		it("updates only supplied fields and preserves the other match data", async () => {
+			const player = await createPlayer();
+			const match = await createAdminMatch({
+				place: "place-1",
+				players: [{ id: player.id, slot: 1 }],
+			});
+			const dateTime = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+			const response = await request(app)
+				.patch(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ dateTime });
 
 			expect(response.status).toBe(200);
 			expect(response.body).toMatchObject({
 				id: match.id,
-				status: "CANCELLED",
+				dateTime,
+				place: "place-1",
+				status: "OPEN",
+				players: [
+					{
+						id: player.id,
+						name: player.name,
+						slot: 1,
+					},
+				],
 			});
 		});
 
-		it.each([
-			["COMPLETED", "CONFIRMED"],
-			["COMPLETED", "CANCELLED"],
-			["CONFIRMED", "CANCELLED"],
-			["CONFIRMED", "COMPLETED"],
-			["CANCELLED", "COMPLETED"],
-		] as const)(
-			"transitions from %s to %s",
-			async (initialStatus, nextStatus) => {
-				const { matchId } = await createCompletedMatch();
-				if (initialStatus !== "COMPLETED") {
-					const initial = await changeMatchStatus(matchId, initialStatus);
-					expect(initial.status).toBe(200);
-				}
+		it("applies the documented status transitions, including reopening confirmed and cancelled matches", async () => {
+			const { matchId } = await createCompletedMatch();
+			const confirmed = await changeMatchStatus(matchId, "CONFIRMED");
+			expect(confirmed.status).toBe(200);
 
-				const response = await changeMatchStatus(matchId, nextStatus);
+			const reopenedConfirmed = await changeMatchStatus(matchId, "COMPLETED");
+			expect(reopenedConfirmed.status).toBe(200);
+			expect(reopenedConfirmed.body.status).toBe("COMPLETED");
 
-				expect(response.status).toBe(200);
-				expect(response.body).toMatchObject({
-					id: matchId,
-					status: nextStatus,
-				});
-			},
-		);
+			const cancelled = await changeMatchStatus(matchId, "CANCELLED");
+			expect(cancelled.status).toBe(200);
+			const reopenedCancelled = await changeMatchStatus(matchId, "COMPLETED");
 
-		it("rejects COMPLETED when fewer than four players are registered", async () => {
+			expect(reopenedCancelled.status).toBe(200);
+			expect(reopenedCancelled.body.status).toBe("COMPLETED");
+		});
+
+		it("rejects an empty body, unsupported fields, invalid statuses, and invalid transitions", async () => {
 			const match = await createAdminMatch();
+			const empty = await request(app)
+				.patch(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({});
+			const unsupportedField = await request(app)
+				.patch(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ players: [] });
+			const invalidStatus = await request(app)
+				.patch(`/api/admin/matches/${match.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ status: "INVALID" });
+			const invalidTransition = await changeMatchStatus(match.id, "CONFIRMED");
 
+			for (const response of [empty, unsupportedField, invalidStatus]) {
+				expect(response.status).toBe(400);
+				expect(response.body).toMatchObject({
+					code: "INVALID_REQUEST",
+					message: expect.any(String),
+				});
+			}
+			expect(invalidTransition.status).toBe(409);
+			expect(invalidTransition.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+		});
+
+		it("requires exactly four players to transition to COMPLETED", async () => {
+			const match = await createAdminMatch();
 			const response = await changeMatchStatus(match.id, "COMPLETED");
 
 			expect(response.status).toBe(409);
@@ -465,34 +677,43 @@ describe("Admin Matches API", () => {
 			});
 		});
 
-		it("rejects invalid statuses and transitions", async () => {
-			const match = await createAdminMatch();
-			const invalid = await request(app)
-				.patch(`/api/admin/matches/${match.id}/status`)
-				.set("Authorization", adminAuthorization)
-				.send({ status: "INVALID" });
-			const invalidTransition = await changeMatchStatus(match.id, "CONFIRMED");
-
-			expect(invalid.status).toBe(400);
-			expect(invalid.body).toMatchObject({
-				code: "INVALID_REQUEST",
-				message: expect.any(String),
-			});
-			expect(invalidTransition.status).toBe(409);
-			expect(invalidTransition.body).toMatchObject({
-				code: expect.any(String),
-				message: expect.any(String),
-			});
-		});
-
 		it("returns 404 when the match does not exist", async () => {
-			const response = await changeMatchStatus("unknown-match", "COMPLETED");
+			const response = await changeMatchStatus("unknown-match", "CANCELLED");
 
 			expect(response.status).toBe(404);
 			expect(response.body).toMatchObject({
 				code: "MATCH_NOT_FOUND",
 				message: expect.any(String),
 			});
+		});
+	});
+
+	describe("removed administrative match endpoints", () => {
+		it("does not expose the separate player registration, removal, or status routes", async () => {
+			const [player, anotherPlayer] = await Promise.all([
+				createPlayer(),
+				createPlayer(),
+			]);
+			const match = await createAdminMatch({
+				players: [{ id: player.id, slot: 1 }],
+			});
+
+			const requests = [
+				request(app)
+					.post(`/api/admin/matches/${match.id}/players`)
+					.set("Authorization", adminAuthorization)
+					.send({ playerId: anotherPlayer.id }),
+				request(app)
+					.delete(`/api/admin/matches/${match.id}/players/${player.id}`)
+					.set("Authorization", adminAuthorization),
+				request(app)
+					.patch(`/api/admin/matches/${match.id}/status`)
+					.set("Authorization", adminAuthorization)
+					.send({ status: "CANCELLED" }),
+			];
+			const responses = await Promise.all(requests);
+
+			expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
 		});
 	});
 

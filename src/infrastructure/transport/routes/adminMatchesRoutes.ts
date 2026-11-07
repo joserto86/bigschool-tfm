@@ -11,15 +11,15 @@ export function createAdminMatchesRouter(
 	const router = Router();
 	const controller = new AdminMatchesController(
 		new AdminMatchesUseCases(matchRepository, playerRepository),
+		playerRepository,
 	);
 
 	router.get("/", controller.listMatches);
 	router.post("/", controller.createMatch);
 	router.get("/:matchId", controller.getMatch);
+	router.put("/:matchId", controller.replaceMatch);
+	router.patch("/:matchId", controller.patchMatch);
 	router.delete("/:matchId", controller.deleteMatch);
-	router.post("/:matchId/players", controller.addPlayer);
-	router.delete("/:matchId/players/:playerId", controller.removePlayer);
-	router.patch("/:matchId/status", controller.updateStatus);
 
 	return router;
 }

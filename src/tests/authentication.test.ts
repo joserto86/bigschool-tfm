@@ -28,7 +28,7 @@ describe("Authentication", () => {
 			expect(response.status).toBe(200);
 			expect(response.body).toMatchObject({
 				tokenType: "Bearer",
-				expiresIn: 900,
+				expiresIn: Number(process.env.ACCESS_TOKEN_EXPIRES_IN),
 				accessToken: expect.any(String),
 				refreshToken: expect.any(String),
 				refreshTokenExpiresAt: expect.any(String),

@@ -11,9 +11,10 @@ export async function toMatchResponse(
         player.playerId,
       );
       return {
-        ...player,
         id: player.playerId,
         name: registeredPlayer?.name ?? player.playerId,
+        confirmation: player.confirmation ?? null,
+        slot: player.slot,
       };
     }),
   );

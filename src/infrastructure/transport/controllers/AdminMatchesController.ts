@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import {
-	AdminMatchFullError,
+	AdminMatchDuplicatePlayerError,
 	AdminMatchPlayerAlreadyRegisteredError,
 	AdminMatchPlayerNotFoundError,
-	AdminMatchPlayerNotRegisteredError,
 	AdminMatchPlayerRemovalNotAllowedError,
 	AdminMatchRequiresFourPlayersError,
+	AdminMatchSlotAlreadyUsedError,
 	InvalidAdminMatchRequestError,
 	InvalidAdminMatchTransitionError,
 } from "../../../domain/Admin/error/MatchError";
@@ -13,20 +13,31 @@ import { AdminMatchesUseCases } from "../../../domain/Admin/AdminMatchesUseCases
 import {
 	InvalidMatchDateTimeError,
 	MatchNotFoundError,
-	MatchNotOpenError,
 } from "../../../domain/Match/error";
+import { IPlayerRepository } from "../../persistence/Player/IPlayerRepository";
+import { toMatchResponse } from "./shared";
 
 export class AdminMatchesController {
-	constructor(private readonly useCases: AdminMatchesUseCases) {}
+	constructor(
+		private readonly useCases: AdminMatchesUseCases,
+		private readonly playerRepository: IPlayerRepository,
+	) {}
 
 	listMatches = async (_req: Request, res: Response): Promise<void> => {
-		res.status(200).json({ items: await this.useCases.listMatches() });
+		const matches = await this.useCases.listMatches();
+		res.status(200).json({
+			items: await Promise.all(
+				matches.map((match) => toMatchResponse(match, this.playerRepository)),
+			),
+		});
 	};
 
 	createMatch = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const match = await this.useCases.createMatch(req.body);
-			res.status(201).json(match);
+			res
+				.status(201)
+				.json(await toMatchResponse(match, this.playerRepository));
 		} catch (error) {
 			if (
 				error instanceof InvalidAdminMatchRequestError ||
@@ -37,6 +48,7 @@ export class AdminMatchesController {
 					.json({ code: "INVALID_REQUEST", message: error.message });
 				return;
 			}
+			if (this.respondToDomainError(error, res)) return;
 			throw error;
 		}
 	};
@@ -46,7 +58,10 @@ export class AdminMatchesController {
 		res: Response,
 	): Promise<void> => {
 		try {
-			res.status(200).json(await this.useCases.getMatch(req.params.matchId));
+			const match = await this.useCases.getMatch(req.params.matchId);
+			res
+				.status(200)
+				.json(await toMatchResponse(match, this.playerRepository));
 		} catch (error) {
 			if (this.respondToDomainError(error, res)) return;
 			throw error;
@@ -66,45 +81,36 @@ export class AdminMatchesController {
 		}
 	};
 
-	addPlayer = async (
+	replaceMatch = async (
 		req: Request<{ matchId: string }>,
 		res: Response,
 	): Promise<void> => {
 		try {
-			const match = await this.useCases.addPlayer(req.params.matchId, req.body);
-			res.status(201).json(match);
-		} catch (error) {
-			if (this.respondToDomainError(error, res)) return;
-			throw error;
-		}
-	};
-
-	removePlayer = async (
-		req: Request<{ matchId: string; playerId: string }>,
-		res: Response,
-	): Promise<void> => {
-		try {
-			const match = await this.useCases.removePlayer(
-				req.params.matchId,
-				req.params.playerId,
-			);
-			res.status(200).json(match);
-		} catch (error) {
-			if (this.respondToDomainError(error, res)) return;
-			throw error;
-		}
-	};
-
-	updateStatus = async (
-		req: Request<{ matchId: string }>,
-		res: Response,
-	): Promise<void> => {
-		try {
-			const match = await this.useCases.updateStatus(
+			const match = await this.useCases.replaceMatch(
 				req.params.matchId,
 				req.body,
 			);
-			res.status(200).json(match);
+			res
+				.status(200)
+				.json(await toMatchResponse(match, this.playerRepository));
+		} catch (error) {
+			if (this.respondToDomainError(error, res)) return;
+			throw error;
+		}
+	};
+
+	patchMatch = async (
+		req: Request<{ matchId: string }>,
+		res: Response,
+	): Promise<void> => {
+		try {
+			const match = await this.useCases.patchMatch(
+				req.params.matchId,
+				req.body,
+			);
+			res
+				.status(200)
+				.json(await toMatchResponse(match, this.playerRepository));
 		} catch (error) {
 			if (this.respondToDomainError(error, res)) return;
 			throw error;
@@ -126,24 +132,17 @@ export class AdminMatchesController {
 				.json({ code: "PLAYER_NOT_FOUND", message: error.message });
 			return true;
 		}
-		if (error instanceof AdminMatchPlayerNotRegisteredError) {
-			res
-				.status(404)
-				.json({ code: "PLAYER_NOT_IN_MATCH", message: error.message });
-			return true;
-		}
-		if (error instanceof AdminMatchPlayerAlreadyRegisteredError) {
+		if (
+			error instanceof AdminMatchPlayerAlreadyRegisteredError ||
+			error instanceof AdminMatchDuplicatePlayerError
+		) {
 			res
 				.status(409)
 				.json({ code: "PLAYER_ALREADY_REGISTERED", message: error.message });
 			return true;
 		}
-		if (error instanceof AdminMatchFullError) {
-			res.status(409).json({ code: "MATCH_FULL", message: error.message });
-			return true;
-		}
-		if (error instanceof MatchNotOpenError) {
-			res.status(409).json({ code: "MATCH_NOT_OPEN", message: error.message });
+		if (error instanceof AdminMatchSlotAlreadyUsedError) {
+			res.status(409).json({ code: "MATCH_SLOT_CONFLICT", message: error.message });
 			return true;
 		}
 		if (error instanceof AdminMatchRequiresFourPlayersError) {
