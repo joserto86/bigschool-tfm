@@ -17,3 +17,12 @@ export interface Match {
 	createdAt: Date;
 	updatedAt?: Date | null;
 }
+
+export interface MatchListOptions {
+	from?: Date;
+	to?: Date;
+	playerId?: string;
+	status?: MatchStatus;
+	sortBy?: "createdAt" | "updatedAt";
+	sortOrder?: "asc" | "desc";
+}

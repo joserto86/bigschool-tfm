@@ -74,6 +74,8 @@ Respuesta `201 Created`: objeto `Match`.
 
 ### Listar todos los partidos
 
+Se debe poder filtrar partidos por fecha 
+
 ```http
 GET /api/admin/matches
 ```
@@ -92,6 +94,12 @@ Respuesta `200 OK`:
   ]
 }
 ```
+
+#### Filtrado de partidos:
+
+El administrador debe poder filtrar todos los partidos por fecha y hora, por fecha desde y fecha hasta, la fecha hasta debe ser siempre superior a la fecha desde. Los partidos deben aparecer ordenados por defecto por fecha de creación. También se debe permitir modificar el orden en el listado de los partidos por fecha de creación y modificación, tanto de manera ascendente como descendente.
+
+Además el administrador también debe poder filtrar los partidos por id de jugador y por los diferentes estados.
 
 ### Consultar un partido
 

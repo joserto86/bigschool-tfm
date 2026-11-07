@@ -127,39 +127,149 @@ describe("Matches API", () => {
 	});
 
 	describe("GET /api/matches", () => {
-		it("returns matches filtered by dateTime", async () => {
+		it("lists all matches without requiring date filters", async () => {
 			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
-			await request(app).post("/api/matches")
-				.set("Authorization", authorization).send({ dateTime });
-
+			const created = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime });
 			const response = await request(app)
 				.get("/api/matches")
-				.set("Authorization", authorization)
-				.query({ dateTime });
-
-			expect(response.status).toBe(200);
-			expect(response.body.items.length).toBeGreaterThanOrEqual(1);
-			for (const match of response.body.items) {
-				expect(match.dateTime).toBe(dateTime);
-				expect(match.place === null || typeof match.place === "string").toBe(true);
-			}
-		});
-
-		it("returns an empty list when no match matches the dateTime", async () => {
-			const response = await request(app)
-				.get("/api/matches")
-				.set("Authorization", authorization)
-				.query({ dateTime: "2030-01-01T00:00:00+01:00" });
-
-			expect(response.status).toBe(200);
-			expect(response.body.items).toEqual([]);
-		});
-
-		it("requires the dateTime query parameter", async () => {
-			const response = await request(app).get("/api/matches")
 				.set("Authorization", authorization);
 
+			expect(created.status).toBe(201);
+			expect(response.status).toBe(200);
+			expect(response.body.items).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({ id: created.body.id, dateTime }),
+				]),
+			);
+		});
+
+		it("filters matches by a from/to date-time interval", async () => {
+			const from = new Date(Date.now() + 3600 * 1000).toISOString();
+			const includedDateTime = new Date(Date.now() + 2 * 3600 * 1000).toISOString();
+			const to = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
+			const before = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: from });
+			const included = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: includedDateTime });
+			const after = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: to });
+			const response = await request(app)
+				.get("/api/matches")
+				.set("Authorization", authorization)
+				.query({
+					from: new Date(Date.parse(from) + 30 * 60 * 1000).toISOString(),
+					to: new Date(Date.parse(to) - 30 * 60 * 1000).toISOString(),
+				});
+
+			expect([before.status, included.status, after.status]).toEqual([
+				201, 201, 201,
+			]);
+			expect(response.status).toBe(200);
+			expect(response.body.items).toEqual([
+				expect.objectContaining({
+					id: included.body.id,
+					dateTime: includedDateTime,
+				}),
+			]);
+		});
+
+		it("rejects a date-time interval whose to value is not later than from", async () => {
+			const dateTime = new Date(Date.now() + 3600 * 1000).toISOString();
+			const response = await request(app)
+				.get("/api/matches")
+				.set("Authorization", authorization)
+				.query({ from: dateTime, to: dateTime });
+
 			expect(response.status).toBe(400);
+			expect(response.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+		});
+
+		it.each([
+			["createdAt", "asc"],
+			["createdAt", "desc"],
+		] as const)("sorts matches by %s in %sending order", async (sortBy, sortOrder) => {
+			const first = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			const second = await request(app)
+				.post("/api/matches")
+				.set("Authorization", authorization)
+				.send({ dateTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString() });
+			const response = await request(app)
+				.get("/api/matches")
+				.set("Authorization", authorization)
+				.query({ sortBy, sortOrder });
+
+			expect(first.status).toBe(201);
+			expect(second.status).toBe(201);
+			expect(response.status).toBe(200);
+			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
+				sortOrder === "asc"
+					? [first.body.id, second.body.id]
+					: [second.body.id, first.body.id],
+			);
+		});
+
+		it.each(["asc", "desc"] as const)(
+			"sorts matches by updatedAt in %sending order",
+			async (sortOrder) => {
+				const first = await request(app)
+					.post("/api/matches")
+					.set("Authorization", authorization)
+					.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
+				const second = await request(app)
+					.post("/api/matches")
+					.set("Authorization", authorization)
+					.send({ dateTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString() });
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				const firstJoin = await request(app)
+					.post(`/api/matches/${first.body.id}/players`)
+					.set("Authorization", await createAuthorization("first-joiner"));
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				const secondJoin = await request(app)
+					.post(`/api/matches/${second.body.id}/players`)
+					.set("Authorization", await createAuthorization("second-joiner"));
+				const response = await request(app)
+					.get("/api/matches")
+					.set("Authorization", authorization)
+					.query({ sortBy: "updatedAt", sortOrder });
+
+				expect(firstJoin.status).toBe(201);
+				expect(secondJoin.status).toBe(201);
+				expect(response.status).toBe(200);
+				expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
+					sortOrder === "asc"
+						? [first.body.id, second.body.id]
+						: [second.body.id, first.body.id],
+				);
+			},
+		);
+
+		it("rejects sort fields that are not supported", async () => {
+			const response = await request(app)
+				.get("/api/matches")
+				.set("Authorization", authorization)
+				.query({ sortBy: "dateTime" });
+
+			expect(response.status).toBe(400);
+			expect(response.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
 		});
 	});
 

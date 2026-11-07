@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-import { Match } from "../../../types/match";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { Match, MatchListOptions } from "../../../types/match";
 import { IMatchRepository } from "./IMatchRepository";
 
 export class PrismaMatchRepository implements IMatchRepository {
@@ -77,17 +77,26 @@ export class PrismaMatchRepository implements IMatchRepository {
 		};
 	}
 
-	async list(): Promise<Match[]> {
+	async list(options: MatchListOptions = {}): Promise<Match[]> {
+		const where: Prisma.MatchWhereInput = {
+			...(options.from !== undefined || options.to !== undefined
+				? {
+						dateTime: {
+							...(options.from !== undefined && { gte: options.from }),
+							...(options.to !== undefined && { lte: options.to }),
+						},
+					}
+				: {}),
+			...(options.status !== undefined && { status: options.status }),
+			...(options.playerId !== undefined && {
+				players: { some: { playerId: options.playerId } },
+			}),
+		};
+		const sortBy = options.sortBy ?? "createdAt";
+		const sortOrder = options.sortOrder ?? "asc";
 		const matches = await this.prisma.match.findMany({
-			include: { players: true },
-		});
-
-		return matches.map((match) => this.toDomain(match));
-	}
-
-	async findByDateTime(dateTime: string): Promise<Match[]> {
-		const matches = await this.prisma.match.findMany({
-			where: { dateTime: this.parseDateTime(dateTime) },
+			where,
+			orderBy: [{ [sortBy]: sortOrder }, { id: sortOrder }],
 			include: { players: true },
 		});
 

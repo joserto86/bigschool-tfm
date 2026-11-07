@@ -2,7 +2,8 @@ import {
 	Player,
 	AdminPlayerCreate,
 	PlayerUpdateResult,
-	PlayerUpdate
+	PlayerUpdate,
+	AdminPlayerListOptions,
 } from "../../../types/player";
 
 export type AdminPlayerStatusUpdateResult =
@@ -12,7 +13,7 @@ export type AdminPlayerStatusUpdateResult =
 export type AdminPlayerDeleteResult = "deleted" | "not-found";
 
 export interface IPlayerRepository {
-	list(): Promise<Player[]>;
+	list(options?: AdminPlayerListOptions): Promise<Player[]>;
 
 	findByEmail(email: string): Promise<Player | null>;
 

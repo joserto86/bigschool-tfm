@@ -10,10 +10,10 @@ import { LeaveMatchUseCase } from "../../../domain/Match/LeaveMatchUseCase";
 import { ConfirmMatchUseCase } from "../../../domain/Match/ConfirmMatchUseCase";
 import {
 	InvalidMatchDateTimeError,
+	InvalidMatchListQueryError,
 	MatchNotCompletedError,
 	MatchNotFoundError,
 	MatchNotOpenError,
-	MissingDateTimeQueryError,
 	PlayerAlreadyScheduledError,
 	PlayerNotInMatchError,
 } from "../../../domain/Match/error";
@@ -58,16 +58,14 @@ export class MatchesController {
 
 	getMatches = async (req: Request, res: Response): Promise<void> => {
 		try {
-			const items = await this.getMatchesUseCase.getMatchesByDateTime(
-				req.query.dateTime as string,
-			);
+			const items = await this.getMatchesUseCase.listMatches(req.query);
 			res.status(200).json({
 				items: await Promise.all(
 					items.map((item) => toMatchResponse(item, this.playerRepository)),
 				),
 			});
 		} catch (error) {
-			if (error instanceof MissingDateTimeQueryError) {
+			if (error instanceof InvalidMatchListQueryError) {
 				res.status(400).json({
 					code: "INVALID_REQUEST",
 					message: error.message,

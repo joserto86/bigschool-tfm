@@ -5,6 +5,7 @@ import {
 	AdminPlayerCreate,
 	PlayerUpdate,
 	AdminPlayerProfile,
+	AdminPlayerListOptions,
 } from "../../types/player";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 import {
@@ -36,6 +37,27 @@ const updatePlayerSchema = z
 	.refine((update) => Object.keys(update).length > 0);
 
 const updatePlayerStatusSchema = z.object({ active: z.boolean() }).strict();
+const queryBooleanSchema = z.preprocess(
+	(value) => {
+		if (value === "true") return true;
+		if (value === "false") return false;
+		return value;
+	},
+	z.boolean(),
+);
+const listPlayersSchema = z
+	.object({
+		name: z.string().trim().min(1).optional(),
+		email: z.string().trim().min(1).optional(),
+		phone: z.string().trim().min(1).optional(),
+		active: queryBooleanSchema.optional(),
+		isAdmin: queryBooleanSchema.optional(),
+		sortBy: z
+			.enum(["name", "email", "phone", "active", "isAdmin"])
+			.default("name"),
+		sortOrder: z.enum(["asc", "desc"]).default("asc"),
+	})
+	.strict();
 
 function toAdminPlayerProfile(player: Player): AdminPlayerProfile {
 	return {
@@ -53,8 +75,14 @@ function toAdminPlayerProfile(player: Player): AdminPlayerProfile {
 export class AdminPlayersUseCases {
 	constructor(private readonly repository: IPlayerRepository) {}
 
-	async listPlayers(): Promise<AdminPlayerProfile[]> {
-		const players = await this.repository.list();
+	async listPlayers(input: unknown): Promise<AdminPlayerProfile[]> {
+		const parsed = listPlayersSchema.safeParse(input);
+		if (!parsed.success) {
+			throw new InvalidAdminPlayerRequestError();
+		}
+
+		const options: AdminPlayerListOptions = parsed.data;
+		const players = await this.repository.list(options);
 		return players.map(toAdminPlayerProfile);
 	}
 

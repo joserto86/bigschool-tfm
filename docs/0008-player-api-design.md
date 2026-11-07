@@ -48,6 +48,8 @@ Respuesta `201 Created`: representación del jugador, sin datos de contraseña. 
 
 ### Listar jugadores
 
+El administrador debe poder hacer búsquedas de jugadores por nombre, correo electrónico y teléfono. Además, debe poder filtrar por estado activo/inactivo y por rol de administrador. Los resultados deben aparecer ordenados por nombre de manera ascendente por defecto, y se debe permitir modificar el orden en el listado de los jugadores por nombre, correo electrónico, teléfono, estado activo/inactivo y rol de administrador, tanto de manera ascendente como descendente.
+
 ```http
 GET /api/admin/players
 ```

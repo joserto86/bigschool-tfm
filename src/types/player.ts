@@ -12,6 +12,16 @@ export interface AdminPlayerProfile extends PlayerProfile {
 	active: boolean
 }
 
+export interface AdminPlayerListOptions {
+	name?: string;
+	email?: string;
+	phone?: string;
+	active?: boolean;
+	isAdmin?: boolean;
+	sortBy?: "name" | "email" | "phone" | "active" | "isAdmin";
+	sortOrder?: "asc" | "desc";
+}
+
 export interface Player extends AdminPlayerProfile {
 	passwordHash: string;
 }
@@ -37,11 +47,3 @@ export interface AdminPlayerCreate {
 	isAdmin: boolean;
 	active: boolean;
 }
-
-// export interface AdminPlayerUpdate {
-// 	name?: string;
-// 	email?: string;
-// 	phone?: string;
-// 	isAdmin?: boolean;
-// 	active?: boolean;
-// }

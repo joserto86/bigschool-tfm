@@ -171,6 +171,166 @@ describe("Admin Players API", () => {
 				expect(player).not.toHaveProperty("password");
 			}
 		});
+
+		it("searches by name, email, and phone and filters by active status and role", async () => {
+			const alpha = await createPlayer({
+				name: "Alpha",
+				email: "alpha@example.com",
+				phone: "+34600000001",
+				active: false,
+				isAdmin: true,
+			});
+			const bravo = await createPlayer({
+				name: "Bravo",
+				email: "bravo@example.com",
+				phone: "+34600000002",
+				active: true,
+				isAdmin: false,
+			});
+			const charlie = await createPlayer({
+				name: "Charlie",
+				email: "charlie@example.com",
+				phone: "+34600000003",
+				active: false,
+				isAdmin: false,
+			});
+			const list = (query: Record<string, string | boolean>) =>
+				request(app)
+					.get("/api/admin/players")
+					.set("Authorization", adminAuthorization)
+					.query(query);
+
+			const byName = await list({ name: "Alpha" });
+			const byEmail = await list({ email: "bravo@example.com" });
+			const byPhone = await list({ phone: "+34600000003" });
+			const inactive = await list({ active: false });
+			const admins = await list({ isAdmin: true });
+
+			for (const response of [byName, byEmail, byPhone, inactive, admins]) {
+				expect(response.status).toBe(200);
+			}
+			expect(byName.body.map((player: { id: string }) => player.id)).toEqual([
+				alpha.body.id,
+			]);
+			expect(byEmail.body.map((player: { id: string }) => player.id)).toEqual([
+				bravo.body.id,
+			]);
+			expect(byPhone.body.map((player: { id: string }) => player.id)).toEqual([
+				charlie.body.id,
+			]);
+			expect(inactive.body.map((player: { id: string }) => player.id)).toEqual(
+				expect.arrayContaining([alpha.body.id, charlie.body.id]),
+			);
+			expect(
+				inactive.body.every((player: { active: boolean }) => !player.active),
+			).toBe(true);
+			expect(admins.body.map((player: { id: string }) => player.id)).toEqual([
+				alpha.body.id,
+			]);
+			expect(
+				admins.body.every((player: { isAdmin: boolean }) => player.isAdmin),
+			).toBe(true);
+		});
+
+		it("sorts by name ascending by default and supports each documented field and direction", async () => {
+			const charlie = await createPlayer({
+				name: "Charlie",
+				email: "charlie@example.com",
+				phone: "+34600000003",
+				active: false,
+				isAdmin: false,
+			});
+			const alpha = await createPlayer({
+				name: "Alpha",
+				email: "alpha@example.com",
+				phone: "+34600000001",
+				active: false,
+				isAdmin: true,
+			});
+			const bravo = await createPlayer({
+				name: "Bravo",
+				email: "bravo@example.com",
+				phone: "+34600000002",
+				active: true,
+				isAdmin: false,
+			});
+			const fixtureIds = new Set([
+				alpha.body.id,
+				bravo.body.id,
+				charlie.body.id,
+			]);
+			const fixtureOrder = (players: Array<{ id: string }>) =>
+				players
+					.map((player) => player.id)
+					.filter((id) => fixtureIds.has(id));
+
+			const list = (query: Record<string, string> = {}) =>
+				request(app)
+					.get("/api/admin/players")
+					.set("Authorization", adminAuthorization)
+					.query(query);
+			const defaultOrder = await list();
+			expect(defaultOrder.status).toBe(200);
+			expect(fixtureOrder(defaultOrder.body)).toEqual([
+				alpha.body.id,
+				bravo.body.id,
+				charlie.body.id,
+			]);
+
+			for (const sortBy of ["name", "email", "phone"] as const) {
+				const ascending = await list({ sortBy, sortOrder: "asc" });
+				const descending = await list({ sortBy, sortOrder: "desc" });
+
+				expect(ascending.status).toBe(200);
+				expect(descending.status).toBe(200);
+				const expectedAscending = [
+					alpha.body.id,
+					bravo.body.id,
+					charlie.body.id,
+				];
+				expect(fixtureOrder(ascending.body)).toEqual(expectedAscending);
+				expect(fixtureOrder(descending.body)).toEqual(
+					expectedAscending.slice().reverse(),
+				);
+			}
+
+			for (const sortBy of ["active", "isAdmin"] as const) {
+				const ascending = await list({ sortBy, sortOrder: "asc" });
+				const descending = await list({ sortBy, sortOrder: "desc" });
+
+				expect(ascending.status).toBe(200);
+				expect(descending.status).toBe(200);
+				expect(
+					ascending.body
+						.filter((player: { id: string }) => fixtureIds.has(player.id))
+						.map((player: { [key: string]: unknown }) => Boolean(player[sortBy])),
+				).toEqual([false, false, true]);
+				expect(
+					descending.body
+						.filter((player: { id: string }) => fixtureIds.has(player.id))
+						.map((player: { [key: string]: unknown }) => Boolean(player[sortBy])),
+				).toEqual([true, false, false]);
+			}
+		});
+
+		it("rejects unsupported sort fields and directions", async () => {
+			const invalidField = await request(app)
+				.get("/api/admin/players")
+				.set("Authorization", adminAuthorization)
+				.query({ sortBy: "createdAt" });
+			const invalidDirection = await request(app)
+				.get("/api/admin/players")
+				.set("Authorization", adminAuthorization)
+				.query({ sortOrder: "sideways" });
+
+			for (const response of [invalidField, invalidDirection]) {
+				expect(response.status).toBe(400);
+				expect(response.body).toMatchObject({
+					code: expect.any(String),
+					message: expect.any(String),
+				});
+			}
+		});
 	});
 
 	describe("GET /api/admin/players/{playerId}", () => {

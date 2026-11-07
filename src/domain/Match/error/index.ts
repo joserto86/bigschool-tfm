@@ -33,11 +33,11 @@ export class MatchNotFoundError extends Error {
 	}
 }
 
-export class MissingDateTimeQueryError extends Error {
-  constructor() {
-    super("The request is invalid.");
-    this.name = "MissingDateTimeQueryError";
-  }
+export class InvalidMatchListQueryError extends Error {
+	constructor() {
+		super("The match list query is invalid.");
+		this.name = "InvalidMatchListQueryError";
+	}
 }
 
 export class MatchNotOpenError extends Error {

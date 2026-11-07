@@ -9,8 +9,13 @@ import {
 export class AdminPlayersController {
 	constructor(private readonly useCases: AdminPlayersUseCases) {}
 
-	listPlayers = async (_req: Request, res: Response): Promise<void> => {
-		res.status(200).json(await this.useCases.listPlayers());
+	listPlayers = async (req: Request, res: Response): Promise<void> => {
+		try {
+			res.status(200).json(await this.useCases.listPlayers(req.query));
+		} catch (error) {
+			if (this.respondToDomainError(error, res)) return;
+			throw error;
+		}
 	};
 
 	createPlayer = async (req: Request, res: Response): Promise<void> => {

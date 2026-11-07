@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client/extension";
-import { Player, PlayerUpdate, PlayerUpdateResult, AdminPlayerCreate, } from "../../../types/player";
+import {
+	Player,
+	PlayerUpdate,
+	PlayerUpdateResult,
+	AdminPlayerCreate,
+	AdminPlayerListOptions,
+} from "../../../types/player";
 import {
 	AdminPlayerStatusUpdateResult,
 	IPlayerRepository,
@@ -9,9 +15,29 @@ import { Prisma } from "@prisma/client";
 export class PrismaPlayerRepository implements IPlayerRepository {
 	constructor(private readonly prisma: PrismaClient) { }
 	
-	async list(): Promise<Player[]> {
+	async list(options: AdminPlayerListOptions = {}): Promise<Player[]> {
+		const where: Prisma.PlayerWhereInput = {
+			...(options.name !== undefined && {
+				name: { contains: options.name, mode: "insensitive" },
+			}),
+			...(options.email !== undefined && {
+				email: { contains: options.email, mode: "insensitive" },
+			}),
+			...(options.phone !== undefined && {
+				phone: { contains: options.phone, mode: "insensitive" },
+			}),
+			...(options.active !== undefined && { active: options.active }),
+			...(options.isAdmin !== undefined && { isAdmin: options.isAdmin }),
+		};
+		const sortBy = options.sortBy ?? "name";
+		const sortOrder = options.sortOrder ?? "asc";
+		const orderBy: Prisma.PlayerOrderByWithRelationInput[] = [
+			{ [sortBy]: sortOrder },
+			{ id: sortOrder },
+		];
 		const users = await this.prisma.player.findMany({
-			orderBy: { createdAt: "asc" },
+			where,
+			orderBy,
 		});
 		return users;
 	}

@@ -492,12 +492,12 @@ Ejemplo de respuesta:
 
 ---
 
-### 6.3 Consultar partidos por fecha/hora
+### 6.3 Consultar partidos
 
-Dado que puede haber múltiples partidos en el mismo horario, resulta necesario poder recuperarlos:
+Cualquier jugador puede consultar todos los partidos. Además también puede filtrar por fecha y hora, es decir, por fecha desde y fecha hasta, la fecha hasta debe ser siempre superior a la fecha desde. Los partidos deben aparecer ordenados por defecto por fecha de creación. También se debe permitir modificar el orden en el listado de los partidos por fecha de creación y modificación, tanto de manera ascendente como descendente.
 
 ```http
-GET /api/matches?dateTime=2026-10-10T18:00:00+02:00
+GET /api/matches?from=2026-10-10T18:00:00+02:00&to=2026-10-20T18:00:00+02:00
 ```
 
 Respuesta:
@@ -616,7 +616,7 @@ Con estos cambios, la API mínima queda:
 ```http
 POST   /api/matches
 GET    /api/matches/{matchId}
-GET    /api/matches?dateTime={dateTime}
+GET    /api/matches?from={dateTime}&to={dateTime}
 
 POST   /api/matches/{matchId}/players
 DELETE /api/matches/{matchId}/players

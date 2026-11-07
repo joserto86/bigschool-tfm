@@ -80,8 +80,8 @@ export class AdminMatchesUseCases {
 		this.getMatchUseCase = new GetMatchesUseCase(matchRepository);
 	}
 
-	async listMatches(): Promise<Match[]> {
-		return this.matchRepository.list();
+	async listMatches(input: unknown): Promise<Match[]> {
+		return this.getMatchUseCase.listMatches(input, true);
 	}
 
 	async createMatch(input: unknown): Promise<Match> {

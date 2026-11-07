@@ -23,7 +23,7 @@ info:
 servers:
   - url: https://api.example.com
     description: Production
-  - url: http://localhost:8080
+  - url: http://localhost:3000
     description: Local
 
 tags:
@@ -93,16 +93,18 @@ paths:
 
     get:
       tags: [Matches]
-      summary: Obtener partidos por fecha/hora
+      summary: Listar partidos
       description: |
-        Devuelve los partidos asociados a una fecha/hora determinada.
-
-        Puede devolver cero, uno o varios partidos porque dateTime no es único.
-      operationId: getMatchesByDateTime
+        Devuelve todos los partidos. Permite filtrar por un intervalo de fecha y
+        hora y ordenar por fecha de creación o modificación.
+      operationId: listMatches
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/DateTimeQuery'
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - $ref: '#/components/parameters/MatchSortBy'
+        - $ref: '#/components/parameters/SortOrder'
       responses:
         '200':
           description: Lista de partidos
@@ -142,6 +144,11 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      x-business-rules:
+        - Any authenticated player can list all matches.
+        - When both from and to are supplied, to must be later than from.
+        - Matches are sorted by createdAt by default.
+        - Results can be sorted by createdAt or updatedAt in ascending or descending order.
 
   /api/matches/{matchId}:
     parameters:
@@ -483,6 +490,14 @@ paths:
       summary: Listar jugadores
       description: Requiere autenticación y rol de administrador. Devuelve la lista de jugadores sin contraseñas ni hashes.
       operationId: listPlayers
+      parameters:
+        - $ref: '#/components/parameters/PlayerNameQuery'
+        - $ref: '#/components/parameters/PlayerEmailQuery'
+        - $ref: '#/components/parameters/PlayerPhoneQuery'
+        - $ref: '#/components/parameters/PlayerActiveQuery'
+        - $ref: '#/components/parameters/PlayerIsAdminQuery'
+        - $ref: '#/components/parameters/PlayerSortBy'
+        - $ref: '#/components/parameters/PlayerSortOrder'
       responses:
         '200':
           description: Lista de jugadores
@@ -490,10 +505,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlayerListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+      x-business-rules:
+        - Requires administrator privileges.
+        - Results can be searched by name, email, and phone.
+        - Results can be filtered by active status and administrator role.
+        - Results are sorted by name in ascending order by default.
+        - Results can be sorted by name, email, phone, active status, or administrator role in ascending or descending order.
     post:
       tags: [Admin Players]
       summary: Crear un jugador
@@ -652,10 +675,17 @@ paths:
     get:
       tags: [Admin Matches]
       summary: Listar todos los partidos
-      description: Requiere autenticación y rol de administrador.
+      description: Requiere autenticación y rol de administrador. Permite filtrar por intervalo de fecha y hora, jugador y estado, y ordenar por fecha de creación o modificación.
       operationId: listAdminMatches
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - $ref: '#/components/parameters/PlayerIdQuery'
+        - $ref: '#/components/parameters/MatchStatusQuery'
+        - $ref: '#/components/parameters/MatchSortBy'
+        - $ref: '#/components/parameters/SortOrder'
       responses:
         '200':
           description: Lista de partidos
@@ -667,6 +697,14 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+      x-business-rules:
+        - Requires administrator privileges.
+        - When both from and to are supplied, to must be later than from.
+        - Matches can be filtered by playerId and match status.
+        - Matches are sorted by createdAt by default.
+        - Results can be sorted by createdAt or updatedAt in ascending or descending order.
     post:
       tags: [Admin Matches]
       summary: Crear un partido
@@ -893,15 +931,112 @@ components:
         type: string
         minLength: 1
         example: player-1
-    DateTimeQuery:
-      name: dateTime
+    FromDateTime:
+      name: from
       in: query
-      required: true
-      description: Fecha y hora del partido en formato ISO-8601 con offset. Puede haber múltiples partidos para el mismo valor.
+      required: false
+      description: Inicio opcional del intervalo de fecha y hora, en formato ISO-8601 con offset.
       schema:
         type: string
         format: date-time
         example: '2026-10-10T18:00:00+02:00'
+    ToDateTime:
+      name: to
+      in: query
+      required: false
+      description: Fin opcional del intervalo de fecha y hora, en formato ISO-8601 con offset. Debe ser posterior a from cuando ambos parámetros se proporcionan.
+      schema:
+        type: string
+        format: date-time
+        example: '2026-10-20T18:00:00+02:00'
+    PlayerIdQuery:
+      name: playerId
+      in: query
+      required: false
+      description: Filtra partidos en los que está inscrito este jugador.
+      schema:
+        type: string
+        minLength: 1
+        example: player-1
+    MatchStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: Filtra partidos por estado.
+      schema:
+        $ref: '#/components/schemas/MatchStatus'
+    MatchSortBy:
+      name: sortBy
+      in: query
+      required: false
+      description: Campo de ordenación. Por defecto se usa createdAt.
+      schema:
+        type: string
+        enum: [createdAt, updatedAt]
+        default: createdAt
+    PlayerNameQuery:
+      name: name
+      in: query
+      required: false
+      description: Criterio de búsqueda por nombre.
+      schema:
+        type: string
+        minLength: 1
+    PlayerEmailQuery:
+      name: email
+      in: query
+      required: false
+      description: Criterio de búsqueda por correo electrónico.
+      schema:
+        type: string
+    PlayerPhoneQuery:
+      name: phone
+      in: query
+      required: false
+      description: Criterio de búsqueda por teléfono.
+      schema:
+        type: string
+        minLength: 1
+    PlayerActiveQuery:
+      name: active
+      in: query
+      required: false
+      description: Filtra por estado activo o inactivo.
+      schema:
+        type: boolean
+    PlayerIsAdminQuery:
+      name: isAdmin
+      in: query
+      required: false
+      description: Filtra por rol de administrador.
+      schema:
+        type: boolean
+    PlayerSortBy:
+      name: sortBy
+      in: query
+      required: false
+      description: Campo de ordenación. Por defecto se usa name.
+      schema:
+        type: string
+        enum: [name, email, phone, active, isAdmin]
+        default: name
+    PlayerSortOrder:
+      name: sortOrder
+      in: query
+      required: false
+      description: Dirección de ordenación. Por defecto se usa asc.
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+    SortOrder:
+      name: sortOrder
+      in: query
+      required: false
+      description: Dirección de ordenación.
+      schema:
+        type: string
+        enum: [asc, desc]
   schemas:
     LoginRequest:
       type: object

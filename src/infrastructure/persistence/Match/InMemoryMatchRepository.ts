@@ -1,4 +1,4 @@
-import { Match } from "../../../types/match";
+import { Match, MatchListOptions } from "../../../types/match";
 import { IMatchRepository } from "./IMatchRepository";
 
 export class InMemoryMatchRepository implements IMatchRepository {
@@ -14,12 +14,39 @@ export class InMemoryMatchRepository implements IMatchRepository {
 		return match;
 	}
 
-	async list(): Promise<Match[]> {
-		return [...this.matches];
-	}
+	async list(options: MatchListOptions = {}): Promise<Match[]> {
+		const sortBy = options.sortBy ?? "createdAt";
+		const sortOrder = options.sortOrder ?? "asc";
+		const direction = sortOrder === "asc" ? 1 : -1;
 
-	async findByDateTime(dateTime: string): Promise<Match[]> {
-		return this.matches.filter((match) => match.dateTime === dateTime);
+		return this.matches
+			.filter((match) => {
+				const dateTime = new Date(match.dateTime);
+				return (
+					(options.from === undefined || dateTime >= options.from) &&
+					(options.to === undefined || dateTime <= options.to) &&
+					(options.status === undefined || match.status === options.status) &&
+					(options.playerId === undefined ||
+						match.players.some((player) => player.playerId === options.playerId))
+				);
+			})
+			.slice()
+			.sort((left, right) => {
+				const leftValue = sortBy === "createdAt" ? left.createdAt : left.updatedAt;
+				const rightValue = sortBy === "createdAt" ? right.createdAt : right.updatedAt;
+
+				if (leftValue == null || rightValue == null) {
+					if (leftValue == null && rightValue == null) return left.id.localeCompare(right.id);
+					return leftValue == null
+						? (sortOrder === "asc" ? 1 : -1)
+						: (sortOrder === "asc" ? -1 : 1);
+				}
+
+				const difference = leftValue.getTime() - rightValue.getTime();
+				return difference === 0
+					? direction * left.id.localeCompare(right.id)
+					: direction * difference;
+			});
 	}
 
 	async findByPlayerIdAfterDateTime(

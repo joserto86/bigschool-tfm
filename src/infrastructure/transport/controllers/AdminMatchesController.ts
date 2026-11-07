@@ -11,6 +11,7 @@ import {
 } from "../../../domain/Admin/error/MatchError";
 import { AdminMatchesUseCases } from "../../../domain/Admin/AdminMatchesUseCases";
 import {
+	InvalidMatchListQueryError,
 	InvalidMatchDateTimeError,
 	MatchNotFoundError,
 } from "../../../domain/Match/error";
@@ -23,13 +24,18 @@ export class AdminMatchesController {
 		private readonly playerRepository: IPlayerRepository,
 	) {}
 
-	listMatches = async (_req: Request, res: Response): Promise<void> => {
-		const matches = await this.useCases.listMatches();
-		res.status(200).json({
-			items: await Promise.all(
-				matches.map((match) => toMatchResponse(match, this.playerRepository)),
-			),
-		});
+	listMatches = async (req: Request, res: Response): Promise<void> => {
+		try {
+			const matches = await this.useCases.listMatches(req.query);
+			res.status(200).json({
+				items: await Promise.all(
+					matches.map((match) => toMatchResponse(match, this.playerRepository)),
+				),
+			});
+		} catch (error) {
+			if (this.respondToDomainError(error, res)) return;
+			throw error;
+		}
 	};
 
 	createMatch = async (req: Request, res: Response): Promise<void> => {
@@ -118,7 +124,10 @@ export class AdminMatchesController {
 	};
 
 	private respondToDomainError(error: unknown, res: Response): boolean {
-		if (error instanceof InvalidAdminMatchRequestError) {
+		if (
+			error instanceof InvalidAdminMatchRequestError ||
+			error instanceof InvalidMatchListQueryError
+		) {
 			res.status(400).json({ code: "INVALID_REQUEST", message: error.message });
 			return true;
 		}

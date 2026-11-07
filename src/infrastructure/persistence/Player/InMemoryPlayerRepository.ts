@@ -4,6 +4,7 @@ import {
 	PlayerUpdateResult,
 	AdminPlayerCreate,
 	PlayerUpdate,
+	AdminPlayerListOptions,
 } from "../../../types/player";
 import {
 	AdminPlayerStatusUpdateResult,
@@ -43,8 +44,42 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 		}
 	}
 
-	async list(): Promise<Player[]> {
-		return this.players.map((player) => ({ ...player }));
+	async list(options: AdminPlayerListOptions = {}): Promise<Player[]> {
+		const sortBy = options.sortBy ?? "name";
+		const sortOrder = options.sortOrder ?? "asc";
+		const direction = sortOrder === "asc" ? 1 : -1;
+
+		return this.players
+			.filter((player) => {
+				const contains = (value: string | null, query: string | undefined) =>
+					query === undefined ||
+					(value !== null &&
+						value.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+
+				return (
+					contains(player.name, options.name) &&
+					contains(player.email, options.email) &&
+					contains(player.phone, options.phone) &&
+					(options.active === undefined || player.active === options.active) &&
+					(options.isAdmin === undefined || player.isAdmin === options.isAdmin)
+				);
+			})
+			.map((player) => ({ ...player }))
+			.sort((left, right) => {
+				let comparison: number;
+				if (sortBy === "active" || sortBy === "isAdmin") {
+					comparison = Number(left[sortBy]) - Number(right[sortBy]);
+				} else {
+					const leftValue = left[sortBy] ?? "";
+					const rightValue = right[sortBy] ?? "";
+					comparison = leftValue.localeCompare(rightValue, undefined, {
+						sensitivity: "base",
+					});
+				}
+				return comparison === 0
+					? direction * left.id.localeCompare(right.id)
+					: direction * comparison;
+			});
 	}
 
 	async findByEmail(email: string): Promise<Player | null> {

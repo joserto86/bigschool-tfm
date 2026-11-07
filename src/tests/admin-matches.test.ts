@@ -387,6 +387,134 @@ describe("Admin Matches API", () => {
 				]),
 			);
 		});
+
+		it("filters matches by date-time interval, player, and status", async () => {
+			const firstPlayer = await createPlayer();
+			const secondPlayer = await createPlayer();
+			const firstDateTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+			const secondDateTime = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
+			const first = await createAdminMatch({
+				dateTime: firstDateTime,
+				players: [{ id: firstPlayer.id, slot: 1 }],
+			});
+			const second = await createAdminMatch({
+				dateTime: secondDateTime,
+				players: [{ id: secondPlayer.id, slot: 1 }],
+			});
+			const completed = await createCompletedMatch();
+			const byPlayer = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ playerId: firstPlayer.id });
+			const byStatus = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ status: "COMPLETED" });
+			const byDateRange = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({
+					from: new Date(Date.parse(secondDateTime) - 30 * 60 * 1000).toISOString(),
+					to: new Date(Date.parse(secondDateTime) + 30 * 60 * 1000).toISOString(),
+				});
+
+			expect(byPlayer.status).toBe(200);
+			expect(byPlayer.body.items.map((match: { id: string }) => match.id)).toEqual([
+				first.id,
+			]);
+			expect(byStatus.status).toBe(200);
+			expect(byStatus.body.items.map((match: { id: string }) => match.id)).toEqual([
+				completed.matchId,
+			]);
+			expect(byDateRange.status).toBe(200);
+			expect(byDateRange.body.items.map((match: { id: string }) => match.id)).toEqual([
+				second.id,
+			]);
+		});
+
+		it("rejects a date-time interval whose to value is not later than from", async () => {
+			const dateTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+			const response = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ from: dateTime, to: dateTime });
+
+			expect(response.status).toBe(400);
+			expect(response.body).toMatchObject({
+				code: expect.any(String),
+				message: expect.any(String),
+			});
+		});
+
+		it.each([
+			["createdAt", "asc"],
+			["createdAt", "desc"],
+		] as const)("sorts matches by %s in %sending order", async (sortBy, sortOrder) => {
+			const first = await createAdminMatch();
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			const second = await createAdminMatch();
+			const response = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ sortBy, sortOrder });
+
+			expect(response.status).toBe(200);
+			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
+				sortOrder === "asc"
+					? [first.id, second.id]
+					: [second.id, first.id],
+			);
+		});
+
+		it.each(["asc", "desc"] as const)(
+			"sorts matches by updatedAt in %sending order",
+			async (sortOrder) => {
+				const first = await createAdminMatch();
+				const second = await createAdminMatch();
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				const firstUpdate = await request(app)
+					.patch(`/api/admin/matches/${first.id}`)
+					.set("Authorization", adminAuthorization)
+					.send({ dateTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() });
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				const secondUpdate = await request(app)
+					.patch(`/api/admin/matches/${second.id}`)
+					.set("Authorization", adminAuthorization)
+					.send({ dateTime: new Date(Date.now() + 49 * 60 * 60 * 1000).toISOString() });
+				const response = await request(app)
+					.get("/api/admin/matches")
+					.set("Authorization", adminAuthorization)
+					.query({ sortBy: "updatedAt", sortOrder });
+
+				expect(firstUpdate.status).toBe(200);
+				expect(secondUpdate.status).toBe(200);
+				expect(response.status).toBe(200);
+				expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
+					sortOrder === "asc"
+						? [first.id, second.id]
+						: [second.id, first.id],
+				);
+			},
+		);
+
+		it("rejects unsupported status and sort parameters", async () => {
+			const invalidStatus = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ status: "INVALID" });
+			const invalidSort = await request(app)
+				.get("/api/admin/matches")
+				.set("Authorization", adminAuthorization)
+				.query({ sortBy: "dateTime" });
+
+			for (const response of [invalidStatus, invalidSort]) {
+				expect(response.status).toBe(400);
+				expect(response.body).toMatchObject({
+					code: expect.any(String),
+					message: expect.any(String),
+				});
+			}
+		});
 	});
 
 	describe("GET /api/admin/matches/{matchId}", () => {
