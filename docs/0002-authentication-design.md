@@ -58,6 +58,8 @@ Autenticación con email y contraseña. No requiere JWT.
 }
 ```
 
+El refresh token debe almacenarse en una cookie establecida por el servidor con atributos HttpOnly, Secure y SameSite=Strict, permitiendo renovar el access token sin exponerlo a scripts del cliente.
+
 Credenciales incorrectas: `401 Unauthorized`, con el mismo mensaje genérico para email inexistente o contraseña incorrecta.
 
 ### Cambiar contraseña

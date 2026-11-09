@@ -324,7 +324,8 @@ paths:
     post:
       tags: [Auth]
       summary: Iniciar sesión
-      description: Autentica al usuario mediante email y contraseña.
+      description: |
+        Autentica al usuario mediante email y contraseña. El refresh token se establece únicamente en una cookie HttpOnly, Secure y SameSite=Strict para no exponerlo a scripts del cliente.
       operationId: login
       security: []
       requestBody:
@@ -338,16 +339,21 @@ paths:
               password: contraseña
       responses:
         '200':
-          description: Autenticación correcta; devuelve un JWT de acceso y un refresh token.
+          description: Autenticación correcta; devuelve el JWT de acceso y establece la cookie del refresh token.
+          headers:
+            Set-Cookie:
+              description: Cookie de refresh token con atributos HttpOnly, Secure y SameSite=Strict; su expiración coincide con refreshTokenExpiresAt.
+              schema:
+                type: string
+              example: "refreshToken=<token-opaco>; HttpOnly; Secure; SameSite=Strict; Path=/api/auth"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                $ref: '#/components/schemas/AccessTokenResponse'
               example:
                 accessToken: <jwt>
                 tokenType: Bearer
                 expiresIn: 900
-                refreshToken: <token-opaco>
                 refreshTokenExpiresAt: '2026-10-27T12:00:00Z'
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -387,26 +393,32 @@ paths:
       tags: [Auth]
       summary: Renovar tokens
       description: |
-        Consume el refresh token presentado y devuelve un nuevo par de tokens. El refresh token se rota de forma atómica.
+        Consume la cookie HttpOnly del refresh token y devuelve un nuevo JWT de acceso. El refresh token se rota de forma atómica y se establece únicamente en una nueva cookie HttpOnly, Secure y SameSite=Strict.
 
         Un refresh token reutilizado invalida su familia de tokens.
       operationId: refreshTokens
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
-            example:
-              refreshToken: <token-opaco>
+      parameters:
+        - name: refreshToken
+          in: cookie
+          required: true
+          description: Cookie HttpOnly establecida por login o por una renovación anterior.
+          schema:
+            type: string
+            minLength: 1
       responses:
         '200':
-          description: Tokens renovados correctamente.
+          description: JWT de acceso renovado y cookie del refresh token rotado.
+          headers:
+            Set-Cookie:
+              description: Nueva cookie de refresh token con atributos HttpOnly, Secure y SameSite=Strict; su expiración coincide con refreshTokenExpiresAt.
+              schema:
+                type: string
+              example: "refreshToken=<token-opaco>; HttpOnly; Secure; SameSite=Strict; Path=/api/auth"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                $ref: '#/components/schemas/AccessTokenResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -1062,17 +1074,9 @@ components:
           type: string
           format: password
           minLength: 1
-    RefreshTokenRequest:
+    AccessTokenResponse:
       type: object
-      required: [refreshToken]
-      properties:
-        refreshToken:
-          type: string
-          minLength: 1
-          description: Refresh token opaco de un solo uso.
-    TokenPair:
-      type: object
-      required: [accessToken, tokenType, expiresIn, refreshToken, refreshTokenExpiresAt]
+      required: [accessToken, tokenType, expiresIn, refreshTokenExpiresAt]
       properties:
         accessToken:
           type: string
@@ -1085,13 +1089,10 @@ components:
           minimum: 1
           description: Tiempo de vida del JWT de acceso en segundos.
           example: 900
-        refreshToken:
-          type: string
-          description: Refresh token opaco; se almacena en el servidor únicamente como hash.
         refreshTokenExpiresAt:
           type: string
           format: date-time
-          description: Fecha y hora de expiración del refresh token.
+          description: Fecha y hora de expiración del refresh token establecido en la cookie HttpOnly.
           example: '2026-10-27T12:00:00Z'
     MatchStatus:
       type: string

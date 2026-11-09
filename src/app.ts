@@ -1,4 +1,5 @@
 import express, { Request, Response, Application } from "express";
+import cors from "cors";
 import { readFile } from "node:fs/promises";
 import swaggerUi from "swagger-ui-express";
 import { resolveSigningKey } from "./domain/Auth/Util/signingKey";
@@ -25,6 +26,11 @@ export function createApp(useDatabase: boolean = false): Application {
 		import.meta.url,
 	);
 
+	app.use(
+		cors({
+			origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+		}),
+	);
 	app.use(express.json());
 
 	const authRepository = useDatabase
