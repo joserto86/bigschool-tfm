@@ -92,11 +92,10 @@ export class PrismaMatchRepository implements IMatchRepository {
 				players: { some: { playerId: options.playerId } },
 			}),
 		};
-		const sortBy = options.sortBy ?? "createdAt";
 		const sortOrder = options.sortOrder ?? "asc";
 		const matches = await this.prisma.match.findMany({
 			where,
-			orderBy: [{ [sortBy]: sortOrder }, { id: sortOrder }],
+			orderBy: [{ dateTime: sortOrder }, { id: sortOrder }],
 			include: { players: true },
 		});
 

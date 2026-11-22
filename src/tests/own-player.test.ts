@@ -73,9 +73,11 @@ describe("Own player API", () => {
 			expect(response.body).toMatchObject({
 				id: "test-player",
 				name: "Test Player",
+				surname: expect.any(String),
 				email: "player@example.com",
 				phone: "+34600111222",
 				createdAt: expect.any(String),
+				position: null,
 			});
 			expect(response.body).toHaveProperty("phone");
 			expect(response.body).toHaveProperty("createdAt");
@@ -117,6 +119,9 @@ describe("Own player API", () => {
 			const authorization = `Bearer ${accessToken}`;
 			const update = {
 				name: "Updated Player",
+				surname: "Updated Surname",
+				nickname: "updated-ace",
+				position: "right",
 				email: "updated@example.com",
 				phone: "+34600111222",
 			};
@@ -130,16 +135,29 @@ describe("Own player API", () => {
 			expect(response.body).toMatchObject({
 				id: "test-player",
 				name: "Updated Player",
+				surname: "Updated Surname",
+				nickname: "updated-ace",
+				position: "right",
 				email: "updated@example.com",
 				phone: "+34600111222",
 			});
 			expect(response.body).not.toHaveProperty("passwordHash");
 
+			const clearPosition = await request(app)
+				.patch("/api/players/me")
+				.set("Authorization", authorization)
+				.send({ position: null });
+			expect(clearPosition.status).toBe(200);
+			expect(clearPosition.body.position).toBeNull();
+
 			const profile = await request(app)
 				.get("/api/players/me")
 				.set("Authorization", authorization);
 			expect(profile.status).toBe(200);
-			expect(profile.body).toMatchObject(update);
+			expect(profile.body).toMatchObject({
+				...update,
+				position: null,
+			});
 		});
 
 		it.each([

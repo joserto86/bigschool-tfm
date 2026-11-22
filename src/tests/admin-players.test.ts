@@ -41,6 +41,7 @@ describe("Admin Players API", () => {
 			.set("Authorization", adminAuthorization)
 			.send({
 				name: "Alex Jugador",
+				surname: "Apellido Jugador",
 				email: "alex@example.com",
 				password: "secure-password",
 				phone: "+34600111222",
@@ -119,11 +120,14 @@ describe("Admin Players API", () => {
 			expect(response.status).toBe(201);
 			expect(response.body).toMatchObject({
 				name: "Alex Jugador",
+				surname: "Apellido Jugador",
 				email: "alex@example.com",
 				phone: "+34600111222",
 				active: true,
 				isAdmin: false,
+				position: null,
 			});
+			expect(response.body).not.toHaveProperty("nickname");
 			expect(response.body.id).toEqual(expect.any(String));
 			expect(response.body.createdAt).toEqual(expect.any(String));
 			expect(response.body).not.toHaveProperty("password");
@@ -146,6 +150,53 @@ describe("Admin Players API", () => {
 			const duplicate = await createPlayer({ email: " ALEX@example.com " });
 			expect(duplicate.status).toBe(409);
 			expect(duplicate.body.code).toBe("CONFLICT");
+		});
+
+		it("requires surname and leaves an omitted nickname unset", async () => {
+			const missingSurname = await createPlayer({ surname: undefined });
+			expect(missingSurname.status).toBe(400);
+			expect(missingSurname.body.code).toBe("INVALID_REQUEST");
+
+			const withoutNickname = await createPlayer({
+				email: "without-nickname@example.com",
+			});
+			expect(withoutNickname.status).toBe(201);
+			expect(withoutNickname.body.surname).toBe("Apellido Jugador");
+			expect(withoutNickname.body.position).toBeNull();
+			expect(withoutNickname.body).not.toHaveProperty("nickname");
+		});
+
+		it("accepts a unique non-empty nickname and a supported position", async () => {
+			const created = await createPlayer({
+				nickname: "ace",
+				position: "right",
+			});
+			expect(created.status).toBe(201);
+			expect(created.body).toMatchObject({
+				nickname: "ace",
+				position: "right",
+			});
+
+			const emptyNickname = await createPlayer({
+				email: "empty-nickname@example.com",
+				nickname: "",
+			});
+			expect(emptyNickname.status).toBe(400);
+			expect(emptyNickname.body.code).toBe("INVALID_REQUEST");
+
+			const duplicateNickname = await createPlayer({
+				email: "duplicate-nickname@example.com",
+				nickname: "ace",
+			});
+			expect(duplicateNickname.status).toBe(409);
+			expect(duplicateNickname.body.code).toBe("CONFLICT");
+
+			const invalidPosition = await createPlayer({
+				email: "invalid-position@example.com",
+				position: "center",
+			});
+			expect(invalidPosition.status).toBe(400);
+			expect(invalidPosition.body.code).toBe("INVALID_REQUEST");
 		});
 	});
 
@@ -362,6 +413,9 @@ describe("Admin Players API", () => {
 				.set("Authorization", adminAuthorization)
 				.send({
 					name: "Alex Actualizado",
+					surname: "Apellido Actualizado",
+					nickname: "ace",
+					position: "left",
 					email: " alex.updated@example.com ",
 					phone: "+34600999888",
 					isAdmin: true,
@@ -371,12 +425,22 @@ describe("Admin Players API", () => {
 			expect(response.body).toMatchObject({
 				id: created.body.id,
 				name: "Alex Actualizado",
+				surname: "Apellido Actualizado",
+				nickname: "ace",
+				position: "left",
 				email: "alex.updated@example.com",
 				phone: "+34600999888",
 				isAdmin: true,
 			});
 			expect(response.body).not.toHaveProperty("passwordHash");
 			expect(response.body).not.toHaveProperty("password");
+
+			const clearPosition = await request(app)
+				.patch(`/api/admin/players/${created.body.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ position: null });
+			expect(clearPosition.status).toBe(200);
+			expect(clearPosition.body.position).toBeNull();
 
 			const login = await request(app).post("/api/auth/login").send({
 				email: "alex.updated@example.com",
@@ -387,6 +451,26 @@ describe("Admin Players API", () => {
 				.set("Authorization", `Bearer ${login.body.accessToken}`);
 			expect(login.status).toBe(200);
 			expect(adminList.status).toBe(200);
+		});
+
+		it("rejects a nickname that is already assigned to another player", async () => {
+			const first = await createPlayer({
+				email: "first-nickname@example.com",
+				nickname: "ace",
+			});
+			const second = await createPlayer({
+				email: "second-nickname@example.com",
+				nickname: "partner",
+			});
+			const response = await request(app)
+				.patch(`/api/admin/players/${second.body.id}`)
+				.set("Authorization", adminAuthorization)
+				.send({ nickname: "ace" });
+
+			expect(first.status).toBe(201);
+			expect(second.status).toBe(201);
+			expect(response.status).toBe(409);
+			expect(response.body.code).toBe("CONFLICT");
 		});
 
 		it("rejects empty, unknown, and malformed profile updates", async () => {

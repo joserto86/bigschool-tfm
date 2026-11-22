@@ -12,9 +12,9 @@ export class AdminPlayerNotFoundError extends Error {
 	}
 }
 
-export class AdminPlayerEmailConflictError extends Error {
+export class AdminPlayerConflictError extends Error {
 	constructor() {
-		super("A player with this email already exists.");
-		this.name = "AdminPlayerEmailConflictError";
+		super("A player with this email or nickname already exists.");
+		this.name = "AdminPlayerConflictError";
 	}
 }

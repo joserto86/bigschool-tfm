@@ -219,6 +219,10 @@ Esto mantiene el contrato público del código y reduce el impacto en el resto d
 model Player {
   id            String   @id @default(cuid())
   email         String   @unique
+  name          String
+  surname       String
+  nickname      String?  @unique
+  position      PlayerPosition?
   passwordHash  String   @map("password_hash")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -227,6 +231,18 @@ model Player {
   matchEntries  MatchPlayer[]
 
   @@map("players")
+}
+```
+
+`surname` es obligatorio. `nickname` puede omitirse y tiene una restricción `UNIQUE`;
+`position` admite `left`, `right` o `null`, sin valor por defecto.
+La migración rellena los apellidos existentes con un espacio en blanco y elimina
+el valor por defecto temporal, por lo que las nuevas altas deben proporcionar `surname`.
+
+```prisma
+enum PlayerPosition {
+  left
+  right
 }
 ```
 
@@ -319,6 +335,7 @@ Además, dado que el modelo de partidos implica inscripciones por jugador y slot
 Se recomienda reforzar, además de la lógica de dominio, las siguientes restricciones:
 
 - `UNIQUE (email)` en `players`
+- `UNIQUE (nickname)` en `players`
 - `UNIQUE (match_id, player_id)` en `match_players`
 - `UNIQUE (match_id, slot)` en `match_players`
 - `CHECK (status IN ('OPEN', 'COMPLETED', 'CONFIRMED', 'CANCELLED'))` en `matches`

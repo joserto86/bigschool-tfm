@@ -18,6 +18,9 @@ const DEVELOPMENT_TEST_USER: Player | undefined =
 		: {
 				id: "test-player",
 				name: "Test Player",
+				surname: " ",
+				nickname: null,
+				position: null,
 				email: "player@example.com",
 				phone: "+34600111222",
 				passwordHash: hashPasswordSync("correct-password"),
@@ -103,7 +106,11 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 	async create(input: AdminPlayerCreate): Promise<Player | null> {
 		const email = input.email.trim().toLowerCase();
 		if (
-			this.players.some((player) => player.email.trim().toLowerCase() === email)
+			this.players.some(
+				(player) =>
+					player.email.trim().toLowerCase() === email ||
+					(input.nickname !== null && player.nickname === input.nickname),
+			)
 		) {
 			return null;
 		}
@@ -112,6 +119,9 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 		const player: Player = {
 			id: randomUUID(),
 			name: input.name,
+			surname: input.surname,
+			nickname: input.nickname,
+			position: input.position,
 			email,
 			phone: input.phone,
 			passwordHash: input.passwordHash,
@@ -143,7 +153,18 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 					candidate.email.trim().toLowerCase() === email,
 			)
 		) {
-			return { status: "email-conflict" };
+			return { status: "conflict" };
+		}
+
+		if (
+			update.nickname !== undefined &&
+			this.players.some(
+				(candidate) =>
+					candidate.id !== playerId &&
+					candidate.nickname === update.nickname,
+			)
+		) {
+			return { status: "conflict" };
 		}
 
 		Object.assign(player, update, email ? { email } : {}, {
@@ -215,6 +236,9 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
 			const player: Player = {
 				id,
 				name: `Test Player ${index}`,
+				surname: " ",
+				nickname: null,
+				position: null,
 				email,
 				phone: null,
 				passwordHash: crypto.randomUUID(),

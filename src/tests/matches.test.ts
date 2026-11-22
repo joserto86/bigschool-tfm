@@ -196,65 +196,55 @@ describe("Matches API", () => {
 			});
 		});
 
-		it.each([
-			["createdAt", "asc"],
-			["createdAt", "desc"],
-		] as const)("sorts matches by %s in %sending order", async (sortBy, sortOrder) => {
-			const first = await request(app)
+		it("sorts matches by dateTime ascending by default", async () => {
+			const laterDateTime = new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString();
+			const earlierDateTime = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+			const createdFirst = await request(app)
 				.post("/api/matches")
 				.set("Authorization", authorization)
-				.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
-			await new Promise((resolve) => setTimeout(resolve, 10));
-			const second = await request(app)
+				.send({ dateTime: laterDateTime });
+			const createdSecond = await request(app)
 				.post("/api/matches")
 				.set("Authorization", authorization)
-				.send({ dateTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString() });
+				.send({ dateTime: earlierDateTime });
 			const response = await request(app)
 				.get("/api/matches")
-				.set("Authorization", authorization)
-				.query({ sortBy, sortOrder });
+				.set("Authorization", authorization);
 
-			expect(first.status).toBe(201);
-			expect(second.status).toBe(201);
+			expect(createdFirst.status).toBe(201);
+			expect(createdSecond.status).toBe(201);
 			expect(response.status).toBe(200);
-			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
-				sortOrder === "asc"
-					? [first.body.id, second.body.id]
-					: [second.body.id, first.body.id],
-			);
+			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual([
+				createdSecond.body.id,
+				createdFirst.body.id,
+			]);
 		});
 
 		it.each(["asc", "desc"] as const)(
-			"sorts matches by updatedAt in %sending order",
+			"sorts matches by dateTime in %s order",
 			async (sortOrder) => {
-				const first = await request(app)
+				const laterDateTime = new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString();
+				const earlierDateTime = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+				const createdFirst = await request(app)
 					.post("/api/matches")
 					.set("Authorization", authorization)
-					.send({ dateTime: new Date(Date.now() + 3600 * 1000).toISOString() });
-				const second = await request(app)
+					.send({ dateTime: laterDateTime });
+				const createdSecond = await request(app)
 					.post("/api/matches")
 					.set("Authorization", authorization)
-					.send({ dateTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString() });
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				const firstJoin = await request(app)
-					.post(`/api/matches/${first.body.id}/players`)
-					.set("Authorization", await createAuthorization("first-joiner"));
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				const secondJoin = await request(app)
-					.post(`/api/matches/${second.body.id}/players`)
-					.set("Authorization", await createAuthorization("second-joiner"));
+					.send({ dateTime: earlierDateTime });
 				const response = await request(app)
 					.get("/api/matches")
 					.set("Authorization", authorization)
-					.query({ sortBy: "updatedAt", sortOrder });
+					.query({ sortBy: "dateTime", sortOrder });
 
-				expect(firstJoin.status).toBe(201);
-				expect(secondJoin.status).toBe(201);
+				expect(createdFirst.status).toBe(201);
+				expect(createdSecond.status).toBe(201);
 				expect(response.status).toBe(200);
 				expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
 					sortOrder === "asc"
-						? [first.body.id, second.body.id]
-						: [second.body.id, first.body.id],
+						? [createdSecond.body.id, createdFirst.body.id]
+						: [createdFirst.body.id, createdSecond.body.id],
 				);
 			},
 		);
@@ -263,7 +253,7 @@ describe("Matches API", () => {
 			const response = await request(app)
 				.get("/api/matches")
 				.set("Authorization", authorization)
-				.query({ sortBy: "dateTime" });
+				.query({ sortBy: "createdAt" });
 
 			expect(response.status).toBe(400);
 			expect(response.body).toMatchObject({

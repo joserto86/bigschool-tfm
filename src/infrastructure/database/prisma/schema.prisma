@@ -8,10 +8,18 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum PlayerPosition {
+  left
+  right
+}
+
 model Player {
   id            String         @id @default(cuid())
   email         String         @unique
   name          String
+  surname       String
+  nickname      String?        @unique
+  position      PlayerPosition?
   passwordHash  String         @map("password_hash")
   phone         String?
   isAdmin       Boolean        @default(false) @map("is_admin")

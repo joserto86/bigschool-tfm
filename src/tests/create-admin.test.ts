@@ -21,11 +21,21 @@ describe("CreateAdminUseCase", () => {
 		useCase = new CreateAdminUseCase(adminRepository, playerRepository);
 	});
 
+	function executeAdmin(input: {
+		email: string;
+		name: string;
+		surname: string;
+		password: string;
+	}) {
+		return useCase.execute(input);
+	}
+
 	it("creates an active administrator with a normalized email and a password hash", async () => {
 		const createAdminSpy = vi.spyOn(adminRepository, "createAdmin");
-		const result = await useCase.execute({
+		const result = await executeAdmin({
 			email: " ADMIN@EXAMPLE.COM ",
 			name: " Ada Admin ",
+			surname: "Admin Surname",
 			password: "secure-password",
 		});
 
@@ -33,6 +43,8 @@ describe("CreateAdminUseCase", () => {
 		expect(createCall).toMatchObject({
 			email: "admin@example.com",
 			name: "Ada Admin",
+			surname: "Admin Surname",
+			position: null,
 			isAdmin: true,
 			active: true,
 		});
@@ -44,16 +56,18 @@ describe("CreateAdminUseCase", () => {
 	});
 
 	it("does not create or elevate an account when the email already exists", async () => {
-		await useCase.execute({
+		await executeAdmin({
 			email: "admin@example.com",
 			name: "Admin",
+			surname: "Admin Surname",
 			password: "secure-password",
 		});
 
 		await expect(
-			useCase.execute({
+			executeAdmin({
 				email: "admin@example.com",
 				name: "Admin",
+				surname: "Admin Surname",
 				password: "secure-password",
 			}),
 		).rejects.toBeInstanceOf(AdminEmailAlreadyExistsError);
@@ -61,14 +75,16 @@ describe("CreateAdminUseCase", () => {
 
 	it("rejects a duplicate created concurrently", async () => {
 		const attempts = await Promise.allSettled([
-			useCase.execute({
+			executeAdmin({
 				email: "admin@example.com",
 				name: "Admin",
+				surname: "Admin Surname",
 				password: "secure-password",
 			}),
-			useCase.execute({
+			executeAdmin({
 				email: "admin@example.com",
 				name: "Admin",
+				surname: "Admin Surname",
 				password: "secure-password",
 			}),
 		]);
@@ -90,12 +106,30 @@ describe("CreateAdminUseCase", () => {
 		const createAdminSpy = vi.spyOn(adminRepository, "createAdmin");
 
 		await expect(
-			useCase.execute({
+			executeAdmin({
 				email: "admin@example.com",
 				name: "Admin",
+				surname: "Admin Surname",
 				password: "short",
 			}),
 		).rejects.toBeInstanceOf(InvalidAdminRequestError);
+		expect(findByEmailSpy).not.toHaveBeenCalled();
+		expect(createAdminSpy).not.toHaveBeenCalled();
+	});
+
+	it("rejects an empty surname before querying the database", async () => {
+		const findByEmailSpy = vi.spyOn(playerRepository, "findByEmail");
+		const createAdminSpy = vi.spyOn(adminRepository, "createAdmin");
+		const input = {
+			email: "admin@example.com",
+			name: "Admin",
+			surname: "",
+			password: "secure-password",
+		};
+
+		await expect(executeAdmin(input)).rejects.toBeInstanceOf(
+			InvalidAdminRequestError,
+		);
 		expect(findByEmailSpy).not.toHaveBeenCalled();
 		expect(createAdminSpy).not.toHaveBeenCalled();
 	});

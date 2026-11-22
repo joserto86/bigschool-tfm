@@ -15,7 +15,6 @@ export class InMemoryMatchRepository implements IMatchRepository {
 	}
 
 	async list(options: MatchListOptions = {}): Promise<Match[]> {
-		const sortBy = options.sortBy ?? "createdAt";
 		const sortOrder = options.sortOrder ?? "asc";
 		const direction = sortOrder === "asc" ? 1 : -1;
 
@@ -32,17 +31,8 @@ export class InMemoryMatchRepository implements IMatchRepository {
 			})
 			.slice()
 			.sort((left, right) => {
-				const leftValue = sortBy === "createdAt" ? left.createdAt : left.updatedAt;
-				const rightValue = sortBy === "createdAt" ? right.createdAt : right.updatedAt;
-
-				if (leftValue == null || rightValue == null) {
-					if (leftValue == null && rightValue == null) return left.id.localeCompare(right.id);
-					return leftValue == null
-						? (sortOrder === "asc" ? 1 : -1)
-						: (sortOrder === "asc" ? -1 : 1);
-				}
-
-				const difference = leftValue.getTime() - rightValue.getTime();
+				const difference =
+					new Date(left.dateTime).getTime() - new Date(right.dateTime).getTime();
 				return difference === 0
 					? direction * left.id.localeCompare(right.id)
 					: direction * difference;

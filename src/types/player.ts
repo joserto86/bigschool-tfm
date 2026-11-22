@@ -1,6 +1,11 @@
+export type PlayerPosition = "left" | "right";
+
 export interface PlayerProfile {
 	id: string;
 	name: string;
+	surname: string;
+	nickname?: string;
+	position: PlayerPosition | null;
 	email: string;
 	phone: string | null;
 	createdAt: Date;
@@ -22,12 +27,16 @@ export interface AdminPlayerListOptions {
 	sortOrder?: "asc" | "desc";
 }
 
-export interface Player extends AdminPlayerProfile {
+export interface Player extends Omit<AdminPlayerProfile, "nickname"> {
+	nickname: string | null;
 	passwordHash: string;
 }
 
 export interface PlayerUpdate {
 	name?: string;
+	surname?: string;
+	nickname?: string;
+	position?: PlayerPosition | null;
 	email?: string;
 	phone?: string;
 	isAdmin?: boolean;
@@ -37,10 +46,13 @@ export interface PlayerUpdate {
 export type PlayerUpdateResult =
 	| { status: "updated"; player: Player }
 	| { status: "not-found" }
-	| { status: "email-conflict" };
+	| { status: "conflict" };
 
 export interface AdminPlayerCreate {
 	name: string;
+	surname: string;
+	nickname: string | null;
+	position: PlayerPosition | null;
 	email: string;
 	passwordHash: string;
 	phone: string;

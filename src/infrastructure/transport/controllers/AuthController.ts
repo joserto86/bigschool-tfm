@@ -47,6 +47,15 @@ export class AuthController {
 		});
 	}
 
+	private clearRefreshTokenCookie(res: Response): void {
+		res.clearCookie("refreshToken", {
+			httpOnly: true,
+			secure: true,
+			sameSite: "strict",
+			path: "/api/auth",
+		});
+	}
+
 	login = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const result = await this.loginUseCase.execute({
@@ -54,7 +63,9 @@ export class AuthController {
 				password: req.body?.password,
 			});
 			this.sendTokenResponse(res, result);
+			return;
 		} catch (error) {
+			this.clearRefreshTokenCookie(res);
 			if (error instanceof InvalidLoginRequestError) {
 				res.status(400).json({
 					code: "INVALID_REQUEST",

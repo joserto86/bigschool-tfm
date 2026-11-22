@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import {
 	GetOwnPlayerUseCase,
 	InvalidOwnPlayerUpdateError,
-	OwnPlayerEmailConflictError,
+	OwnPlayerConflictError,
 	UpdateOwnPlayerUseCase,
 } from "../../../domain/Player/OwnPlayerUseCases";
 import { GetMatchesUseCase } from "../../../domain/Match/GetMatchesUseCase";
@@ -97,7 +97,7 @@ export class PlayersController {
 				});
 				return;
 			}
-			if (error instanceof OwnPlayerEmailConflictError) {
+			if (error instanceof OwnPlayerConflictError) {
 				res.status(409).json({
 					code: "CONFLICT",
 					message: error.message,

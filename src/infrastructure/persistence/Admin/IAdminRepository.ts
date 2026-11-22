@@ -1,8 +1,11 @@
-import { Player } from "@prisma/client";
+import { PlayerPosition } from "../../../types/player";
 
 export interface AdminRecord {
 	email: string;
 	name: string;
+	surname: string;
+	nickname: string | null;
+	position: PlayerPosition | null;
 	passwordHash: string;
 	isAdmin: true;
 	active: true;

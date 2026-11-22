@@ -11,6 +11,9 @@ export class PrismaAdminRepository implements IAdminRepository {
 			select: {
 				id: true,
 				name: true,
+				surname: true,
+				nickname: true,
+				position: true,
 				email: true,
 				phone: true,
 				passwordHash: true,
@@ -29,6 +32,9 @@ export class PrismaAdminRepository implements IAdminRepository {
 			select: {
 				id: true,
 				name: true,
+				surname: true,
+				nickname: true,
+				position: true,
 				email: true,
 				phone: true,
 				passwordHash: true,

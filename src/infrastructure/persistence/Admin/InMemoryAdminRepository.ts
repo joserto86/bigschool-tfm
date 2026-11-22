@@ -14,6 +14,9 @@ export class InMemoryAdminRepository implements IAdminRepository {
 		const newPlayer: Player = {
 			id: randomUUID(),
 			name: player.name,
+			surname: player.surname,
+			nickname: player.nickname,
+			position: player.position,
 			email: email,
 			phone: null,
 			passwordHash: player.passwordHash,

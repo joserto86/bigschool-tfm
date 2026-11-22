@@ -10,7 +10,7 @@ import {
 const matchListFields = {
 	from: z.iso.datetime({ offset: true }).optional(),
 	to: z.iso.datetime({ offset: true }).optional(),
-	sortBy: z.enum(["createdAt", "updatedAt"]).default("createdAt"),
+	sortBy: z.enum(["dateTime"]).default("dateTime"),
 	sortOrder: z.enum(["asc", "desc"]).default("asc"),
 };
 

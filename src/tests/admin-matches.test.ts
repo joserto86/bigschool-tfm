@@ -86,6 +86,7 @@ describe("Admin Matches API", () => {
 			.set("Authorization", adminAuthorization)
 			.send({
 				name,
+				surname: "Player Surname",
 				email: `player-${playerCounter}@example.com`,
 				password: "secure-password",
 				phone: `+34600000${String(playerCounter).padStart(3, "0")}`,
@@ -446,53 +447,41 @@ describe("Admin Matches API", () => {
 			});
 		});
 
-		it.each([
-			["createdAt", "asc"],
-			["createdAt", "desc"],
-		] as const)("sorts matches by %s in %sending order", async (sortBy, sortOrder) => {
-			const first = await createAdminMatch();
-			await new Promise((resolve) => setTimeout(resolve, 10));
-			const second = await createAdminMatch();
+		it("sorts matches by dateTime ascending by default", async () => {
+			const later = await createAdminMatch({
+				dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+			});
+			const earlier = await createAdminMatch({
+				dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+			});
 			const response = await request(app)
 				.get("/api/admin/matches")
-				.set("Authorization", adminAuthorization)
-				.query({ sortBy, sortOrder });
+				.set("Authorization", adminAuthorization);
 
 			expect(response.status).toBe(200);
-			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
-				sortOrder === "asc"
-					? [first.id, second.id]
-					: [second.id, first.id],
-			);
+			expect(response.body.items.map((match: { id: string }) => match.id)).toEqual([
+				earlier.id,
+				later.id,
+			]);
 		});
 
 		it.each(["asc", "desc"] as const)(
-			"sorts matches by updatedAt in %sending order",
+			"sorts matches by dateTime in %s order",
 			async (sortOrder) => {
-				const first = await createAdminMatch();
-				const second = await createAdminMatch();
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				const firstUpdate = await request(app)
-					.patch(`/api/admin/matches/${first.id}`)
-					.set("Authorization", adminAuthorization)
-					.send({ dateTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() });
-				await new Promise((resolve) => setTimeout(resolve, 10));
-				const secondUpdate = await request(app)
-					.patch(`/api/admin/matches/${second.id}`)
-					.set("Authorization", adminAuthorization)
-					.send({ dateTime: new Date(Date.now() + 49 * 60 * 60 * 1000).toISOString() });
+				const later = await createAdminMatch({
+					dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+				});
+				const earlier = await createAdminMatch({
+					dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+				});
 				const response = await request(app)
 					.get("/api/admin/matches")
 					.set("Authorization", adminAuthorization)
-					.query({ sortBy: "updatedAt", sortOrder });
+					.query({ sortBy: "dateTime", sortOrder });
 
-				expect(firstUpdate.status).toBe(200);
-				expect(secondUpdate.status).toBe(200);
 				expect(response.status).toBe(200);
 				expect(response.body.items.map((match: { id: string }) => match.id)).toEqual(
-					sortOrder === "asc"
-						? [first.id, second.id]
-						: [second.id, first.id],
+					sortOrder === "asc" ? [earlier.id, later.id] : [later.id, earlier.id],
 				);
 			},
 		);
@@ -505,7 +494,7 @@ describe("Admin Matches API", () => {
 			const invalidSort = await request(app)
 				.get("/api/admin/matches")
 				.set("Authorization", adminAuthorization)
-				.query({ sortBy: "dateTime" });
+				.query({ sortBy: "createdAt" });
 
 			for (const response of [invalidStatus, invalidSort]) {
 				expect(response.status).toBe(400);

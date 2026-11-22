@@ -23,6 +23,6 @@ export interface MatchListOptions {
 	to?: Date;
 	playerId?: string;
 	status?: MatchStatus;
-	sortBy?: "createdAt" | "updatedAt";
+	sortBy?: "dateTime";
 	sortOrder?: "asc" | "desc";
 }

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { AdminPlayersUseCases } from "../../../domain/Admin/AdminPlayersUseCases";
 import {
-	AdminPlayerEmailConflictError,
+	AdminPlayerConflictError,
 	AdminPlayerNotFoundError,
 	InvalidAdminPlayerRequestError,
 } from "../../../domain/Admin/error/PlayerError";
@@ -101,7 +101,7 @@ export class AdminPlayersController {
 			});
 			return true;
 		}
-		if (error instanceof AdminPlayerEmailConflictError) {
+		if (error instanceof AdminPlayerConflictError) {
 			res.status(409).json({
 				code: "CONFLICT",
 				message: error.message,

@@ -10,6 +10,9 @@ Definir las necesidades y los endpoints para crear, consultar, actualizar, elimi
 | --- | --- |
 | `playerId` | Identificador único generado por la API. |
 | `name` | Nombre del jugador. |
+| `surname` | Apellidos obligatorios del jugador. |
+| `nickname` | Apodo opcional y único; si se proporciona, no puede estar vacío. La columna correspondiente en la base de datos debe tener una restricción `UNIQUE`. |
+| `position` | Preferencia en pista: `left` o `right`; si no está establecida, su valor es `null`. |
 | `email` | Correo electrónico único; se normaliza eliminando espacios y convirtiéndolo a minúsculas. |
 | `password` | Contraseña recibida al crear la cuenta. Se almacena únicamente como hash y nunca se devuelve. |
 | `phone` | Teléfono del jugador. |
@@ -42,9 +45,9 @@ Las rutas administrativas deben responder `401 Unauthorized` si falta una autent
 POST /api/admin/players
 ```
 
-Requiere rol de administrador. Recibe `name`, `email`, `password`, `phone` y `active`. El estado se indica explícitamente al crear la cuenta.
+Requiere rol de administrador. Recibe `name`, `surname`, `nickname`, `position`, `email`, `password`, `phone` y `active`. `surname` es obligatorio; `nickname` es opcional, pero si se proporciona no puede estar vacío y debe ser único. `position` es opcional: si no se indica, su valor será `null`; si se establece, sólo puede ser `left` o `right`. El estado se indica explícitamente al crear la cuenta.
 
-Respuesta `201 Created`: representación del jugador, sin datos de contraseña. Si el correo ya está registrado, responde `409 Conflict`.
+Respuesta `201 Created`: representación del jugador, sin datos de contraseña. Si el correo o el nickname ya están registrados, responde `409 Conflict`.
 
 ### Listar jugadores
 
@@ -74,9 +77,9 @@ Respuesta `200 OK` con la representación del jugador, o `404 Not Found` si no e
 PATCH /api/admin/players/{playerId}
 ```
 
-Requiere rol de administrador y permite actualizar cualquier jugador. Permite modificar `name`, `email`, `isAdmin` y `phone`; el estado activo/inactivo se cambia mediante el endpoint de estado. No modifica la contraseña, cuyo cambio sigue el flujo de autenticación.
+Requiere rol de administrador y permite actualizar cualquier jugador. Permite modificar `name`, `surname`, `nickname`, `position`, `email`, `isAdmin` y `phone`; el estado activo/inactivo se cambia mediante el endpoint de estado. El nickname, si se proporciona, no puede estar vacío y debe ser único. La posición puede establecerse en `left` o `right`, o enviarse como `null` para dejarla sin establecer. No modifica la contraseña, cuyo cambio sigue el flujo de autenticación.
 
-Respuesta `200 OK` con el jugador actualizado. Responde `404 Not Found` si no existe y `409 Conflict` si el correo ya pertenece a otro jugador.
+Respuesta `200 OK` con el jugador actualizado. Responde `404 Not Found` si no existe y `409 Conflict` si el correo o el nickname ya pertenecen a otro jugador.
 
 ### Consultar la propia información
 
@@ -92,9 +95,9 @@ Requiere autenticación. Devuelve únicamente la información del jugador asocia
 PATCH /api/players/me
 ```
 
-Requiere autenticación. Permite al jugador modificar únicamente `name`, `email` y `phone` de su propia cuenta. No permite cambiar `active` ni `isAdmin`; esos campos no se aceptan en esta operación. La contraseña se cambia mediante el flujo de autenticación.
+Requiere autenticación. Permite al jugador modificar únicamente `name`, `surname`, `nickname`, `position`, `email` y `phone` de su propia cuenta. El nickname, si se proporciona, no puede estar vacío y debe ser único. La posición puede establecerse en `left` o `right`, o enviarse como `null` para dejarla sin establecer. No permite cambiar `active` ni `isAdmin`; esos campos no se aceptan en esta operación. La contraseña se cambia mediante el flujo de autenticación.
 
-Respuesta `200 OK` con la información actualizada. Responde `409 Conflict` si el correo ya pertenece a otro jugador.
+Respuesta `200 OK` con la información actualizada. Responde `409 Conflict` si el correo o el nickname ya pertenecen a otro jugador.
 
 ### Consultar información propia de partidos inscritos
 
@@ -136,6 +139,9 @@ Respuesta `204 No Content` si se elimina correctamente, o `404 Not Found` si no 
 
 - Los campos requeridos y el formato del correo se validan antes de crear o actualizar un jugador.
 - El correo debe ser único tras su normalización.
+- El apellido es obligatorio.
+- El nickname es opcional; si se proporciona, no puede estar vacío y debe ser único. Su columna en la base de datos debe tener una restricción `UNIQUE`.
+- La preferencia en pista admite `left`, `right` o `null`; si no se indica al crear o se elimina al actualizar, su valor es `null`.
 - Las fechas y el identificador son de solo lectura y los asigna el servidor.
 - Los errores usan el formato común de la API:
 

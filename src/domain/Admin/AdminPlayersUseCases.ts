@@ -9,7 +9,7 @@ import {
 } from "../../types/player";
 import { IPlayerRepository } from "../../infrastructure/persistence/Player/IPlayerRepository";
 import {
-	AdminPlayerEmailConflictError,
+	AdminPlayerConflictError,
 	AdminPlayerNotFoundError,
 	InvalidAdminPlayerRequestError,
 } from "./error/PlayerError";
@@ -17,6 +17,9 @@ import {
 const createPlayerSchema = z
 	.object({
 		name: z.string().trim().min(1),
+		surname: z.string().min(1),
+		nickname: z.string().min(1).optional(),
+		position: z.enum(["left", "right"]).nullable().optional(),
 		email: z.string().trim().toLowerCase().pipe(z.email()),
 		password: z.string().min(8).max(128),
 		phone: z.string().trim().min(1),
@@ -28,6 +31,9 @@ const createPlayerSchema = z
 const updatePlayerSchema = z
 	.object({
 		name: z.string().trim().min(1).optional(),
+		surname: z.string().min(1).optional(),
+		nickname: z.string().min(1).optional(),
+		position: z.enum(["left", "right"]).nullable().optional(),
 		email: z.string().trim().toLowerCase().pipe(z.email()).optional(),
 		phone: z.string().trim().min(1).optional(),
 		isAdmin: z.boolean().optional(),
@@ -63,6 +69,9 @@ function toAdminPlayerProfile(player: Player): AdminPlayerProfile {
 	return {
 		id: player.id,
 		name: player.name,
+		surname: player.surname,
+		...(player.nickname === null ? {} : { nickname: player.nickname }),
+		position: player.position,
 		email: player.email,
 		phone: player.phone,
 		isAdmin: player.isAdmin,
@@ -94,6 +103,9 @@ export class AdminPlayersUseCases {
 
 		const playerInput: AdminPlayerCreate = {
 			name: parsed.data.name,
+			surname: parsed.data.surname,
+			nickname: parsed.data.nickname ?? null,
+			position: parsed.data.position ?? null,
 			email: parsed.data.email,
 			passwordHash: await hashPassword(parsed.data.password),
 			phone: parsed.data.phone,
@@ -104,8 +116,7 @@ export class AdminPlayersUseCases {
 		const player = await this.repository.create(playerInput);
 
 		if (!player) {
-			console.log("Email conflict detected for email:", playerInput.email); // Log the email that caused the conflict
-			throw new AdminPlayerEmailConflictError();
+			throw new AdminPlayerConflictError();
 		}
 
 		return toAdminPlayerProfile(player);
@@ -133,8 +144,8 @@ export class AdminPlayersUseCases {
 		if (result.status === "not-found") {
 			throw new AdminPlayerNotFoundError();
 		}
-		if (result.status === "email-conflict") {
-			throw new AdminPlayerEmailConflictError();
+		if (result.status === "conflict") {
+			throw new AdminPlayerConflictError();
 		}
 		return toAdminPlayerProfile(result.player);
 	}

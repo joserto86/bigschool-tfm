@@ -11,6 +11,7 @@ import { CreateAdminInputDto } from "./dto/CreateAdminInputDto";
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email());
 const nameSchema = z.string().trim().min(1);
+const surnameSchema = z.string().min(1);
 const passwordSchema = z
 	.string()
 	.min(MIN_PASSWORD_LENGTH)
@@ -33,6 +34,11 @@ export class CreateAdminUseCase {
 			throw new InvalidAdminRequestError("Name cannot be empty.");
 		}
 
+		const surname = surnameSchema.safeParse(input.surname);
+		if (!surname.success) {
+			throw new InvalidAdminRequestError("Surname cannot be empty.");
+		}
+
 		const password = passwordSchema.safeParse(input.password);
 		if (!password.success) {
 			throw new InvalidAdminRequestError(
@@ -48,6 +54,9 @@ export class CreateAdminUseCase {
 		const created = await this.adminRepository.createAdmin({
 			email: email.data,
 			name: name.data,
+			surname: surname.data,
+			nickname: null,
+			position: null,
 			passwordHash,
 			isAdmin: true,
 			active: true,

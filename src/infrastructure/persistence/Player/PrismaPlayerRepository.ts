@@ -65,6 +65,9 @@ export class PrismaPlayerRepository implements IPlayerRepository {
 			const user = await this.prisma.player.create({
 				data: {
 					name: input.name,
+					surname: input.surname,
+					nickname: input.nickname,
+					position: input.position,
 					email: input.email,
 					passwordHash: input.passwordHash,
 					phone: input.phone,
@@ -93,6 +96,15 @@ export class PrismaPlayerRepository implements IPlayerRepository {
 				where: { id: playerId },
 				data: {
 					...(update.name !== undefined && { name: update.name }),
+					...(update.surname !== undefined && {
+						surname: update.surname,
+					}),
+					...(update.nickname !== undefined && {
+						nickname: update.nickname,
+					}),
+					...(update.position !== undefined && {
+						position: update.position,
+					}),
 					...(update.email !== undefined && { email: update.email }),
 					...(update.phone !== undefined && { phone: update.phone }),
 					...(update.isAdmin !== undefined && {
@@ -109,7 +121,7 @@ export class PrismaPlayerRepository implements IPlayerRepository {
 				error instanceof Prisma.PrismaClientKnownRequestError &&
 				error.code === "P2002"
 			) {
-				return { status: "email-conflict" };
+				return { status: "conflict" };
 			}
 			if (
 				error instanceof Prisma.PrismaClientKnownRequestError &&

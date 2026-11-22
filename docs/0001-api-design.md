@@ -494,7 +494,7 @@ Ejemplo de respuesta:
 
 ### 6.3 Consultar partidos
 
-Cualquier jugador puede consultar todos los partidos. Además también puede filtrar por fecha y hora, es decir, por fecha desde y fecha hasta, la fecha hasta debe ser siempre superior a la fecha desde. Los partidos deben aparecer ordenados por defecto por fecha de creación. También se debe permitir modificar el orden en el listado de los partidos por fecha de creación y modificación, tanto de manera ascendente como descendente.
+Cualquier jugador puede consultar todos los partidos. Además también puede filtrar por fecha y hora, es decir, por fecha desde y fecha hasta, la fecha hasta debe ser siempre superior a la fecha desde. Los partidos deben aparecer ordenados por defecto por la fecha en la que se celebren. También se debe permitir modificar el orden en el listado de los partidos por dicha fecha de celebracion, tanto de manera ascendente como descendente.
 
 ```http
 GET /api/matches?from=2026-10-10T18:00:00+02:00&to=2026-10-20T18:00:00+02:00

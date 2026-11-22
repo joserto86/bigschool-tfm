@@ -21,6 +21,7 @@ async function main(): Promise<void> {
 		const result = await createAdmin.execute({
 			email: await input({ message: "Administrator email" }),
 			name: await input({ message: "Administrator name" }),
+			surname: await input({ message: "Administrator surname" }),
 			password: await password({
 				message: "Administrator password",
 				mask: "*",
